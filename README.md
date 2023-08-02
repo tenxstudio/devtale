@@ -17,7 +17,7 @@ Automatically document repositories
   pip install -r requirements.txt
   ```
 
-  ## Usage
+## Usage
 
 ```
 python cli.py -f [path/to/your/code/file]
