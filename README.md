@@ -4,22 +4,22 @@ Automatically document repositories
 
 ## Installation
 
-- Create and enter to a conda env:
+Create and enter to a conda env:
 
-  ```
-  conda create -n dev-tales python=3.11 -y
-  conda activate dev-tales
-  ```
+```bash
+conda create -n dev-tales python=3.11 -y
+conda activate dev-tales
+```
 
-- Install requirements
+Install requirements
 
-  ```
-  pip install -r requirements.txt
-  ```
+```bash
+pip install -r requirements.txt
+```
 
 ## Usage
 
-```
+```bash
 python cli.py -f [path/to/your/code/file]
 ```
 
