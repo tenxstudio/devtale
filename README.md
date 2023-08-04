@@ -23,4 +23,4 @@ pip install -r requirements.txt
 python cli.py -f [path/to/your/code/file]
 ```
 
-The result will be saved with the same name as the original file in the default folder `dev_tales_demo` unless you specify a different folder with the flag `-o [path/to/your/output/folder]`
+Result is JSON file saved in `dev_tales_demo`

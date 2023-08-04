@@ -1,10 +1,12 @@
 import getpass
+import json
 import logging
 import os
+from pprint import pprint
 
 import click
 
-from dev_tales.utils import add_tales, fuse_tales, get_unit_tale, split
+from dev_tales.utils import fuse_tales, get_unit_tale, split
 
 DEFAULT_OUTPUT_PATH = "dev_tales_demo/"
 DEFAULT_MODEL_NAME = "gpt-3.5-turbo"
@@ -22,12 +24,12 @@ def document_file(
         os.makedirs(output_path)
 
     logger.info("read code file")
-    file_name = os.path.basename(file_path)
+    os.path.basename(file_path)
     with open(file_path, "r") as file:
         code = file.read()
 
     logger.info("split code into sections")
-    docs = split(code, chunk_size=2000)
+    docs = split(code, chunk_size=3000)
 
     logger.info("create docstrings per section")
     tales_list = []
@@ -39,13 +41,21 @@ def document_file(
     logger.info("combine docstrings")
     file_tales = fuse_tales(tales_list)
 
-    logger.info("add documentation to the code")
-    documented_code = add_tales(file_tales, code)
+    save_path = os.path.join(output_path, "output.json")
+    logger.info(f"save documentation in: {file_path}")
+    with open(save_path, "w") as json_file:
+        json.dump(file_tales, json_file, indent=2)
 
-    save_path = os.path.join(output_path, file_name)
-    logger.info(f"save documented file in {save_path}")
-    with open(save_path, "w") as file:
-        file.write(documented_code)
+    logger.info("Generated documentation:")
+    pprint(file_tales)
+
+    # logger.info("add documentation to the code")
+    # documented_code = add_tales(file_tales, code)
+
+    # save_path = os.path.join(output_path, file_name)
+    # logger.info(f"save documented file in {save_path}")
+    # with open(save_path, "w") as file:
+    #    file.write(documented_code)
 
 
 @click.command()
