@@ -39,7 +39,7 @@ def get_unit_tale(doc, model_name="gpt-3.5-turbo", verbose=False):
             Error: {e} \n Result {result_string}"
         )
         print("Returning empty JSON instead")
-        empty = {"file_docstring": "", "classes": [], "methods": []}
+        empty = {"classes": [], "methods": []}
         return empty
     return result_json
 
@@ -70,20 +70,27 @@ def add_tales(docstrings, code, language="php", signature="@AI-generated docstri
             documented_code,
         )
 
-    # write file-level docstring
-    f"/*\n * {docstrings['file_docstring']}\n */\n{documented_code}"
-
     return documented_code
 
 
 def fuse_tales(tales_list):
-    fused_tale = {"file_docstring": "", "classes": [], "methods": []}
+    fused_tale = {"classes": [], "methods": []}
+    unique_methods = set()
+    unique_classes = set()
+
     for tale in tales_list:
-        if "file_docstring" in tale:
-            fused_tale["file_docstring"] += tale["file_docstring"] + "\n"
         if "classes" in tale:
-            fused_tale["classes"].extend(tale["classes"])
+            for class_info in tale["classes"]:
+                class_name = class_info["class_name"]
+                if class_name not in unique_classes:
+                    unique_classes.add(class_name)
+                    fused_tale["classes"].append(class_info)
+
         if "methods" in tale:
-            fused_tale["methods"].extend(tale["methods"])
+            for method in tale["methods"]:
+                method_name = method["method_name"]
+                if method_name not in unique_methods:
+                    unique_methods.add(method_name)
+                    fused_tale["methods"].append(method)
 
     return fused_tale
