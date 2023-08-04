@@ -23,4 +23,4 @@ pip install -r requirements.txt
 python cli.py -f [path/to/your/code/file]
 ```
 
-Result is JSON file saved in `dev_tales_demo`
+Result is JSON file saved in `dev_tales_demo` with the same name as the input file.

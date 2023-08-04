@@ -24,7 +24,7 @@ def document_file(
         os.makedirs(output_path)
 
     logger.info("read code file")
-    os.path.basename(file_path)
+    file_name = os.path.basename(file_path)
     with open(file_path, "r") as file:
         code = file.read()
 
@@ -41,7 +41,7 @@ def document_file(
     logger.info("combine docstrings")
     file_tales = fuse_tales(tales_list)
 
-    save_path = os.path.join(output_path, "output.json")
+    save_path = os.path.join(output_path, f"{file_name}.json")
     logger.info(f"save documentation in: {file_path}")
     with open(save_path, "w") as json_file:
         json.dump(file_tales, json_file, indent=2)

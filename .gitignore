@@ -229,3 +229,4 @@ cython_debug/
 
 testing/
 dev_tales_demo/
+notebooks/
