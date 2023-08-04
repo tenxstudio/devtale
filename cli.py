@@ -6,7 +6,7 @@ from pprint import pprint
 
 import click
 
-from dev_tales.utils import fuse_tales, get_unit_tale, split
+from dev_tales.utils import fuse_tales, get_tale_summary, get_unit_tale, split
 
 DEFAULT_OUTPUT_PATH = "dev_tales_demo/"
 DEFAULT_MODEL_NAME = "gpt-3.5-turbo"
@@ -23,31 +23,34 @@ def document_file(
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    logger.info("read code file")
+    logger.info("read dev draft")
     file_name = os.path.basename(file_path)
     with open(file_path, "r") as file:
         code = file.read()
 
-    logger.info("split code into sections")
+    logger.info("split dev draft ideas")
     docs = split(code, chunk_size=3000)
 
-    logger.info("create docstrings per section")
+    logger.info("create tale sections")
     tales_list = []
     for idx, doc in enumerate(docs):
         tale = get_unit_tale(doc, model_name=model_name)
         tales_list.append(tale)
-        logger.info(f"docstring {str(idx+1)}/{len(docs)} done.")
+        logger.info(f"tale section {str(idx+1)}/{len(docs)} done.")
 
-    logger.info("combine docstrings")
+    logger.info("write dev tale")
     file_tales = fuse_tales(tales_list)
 
-    save_path = os.path.join(output_path, f"{file_name}.json")
-    logger.info(f"save documentation in: {file_path}")
-    with open(save_path, "w") as json_file:
-        json.dump(file_tales, json_file, indent=2)
+    logger.info("add dev tale summary")
+    final_tale = get_tale_summary(file_tales)
 
-    logger.info("Generated documentation:")
-    pprint(file_tales)
+    save_path = os.path.join(output_path, f"{file_name}.json")
+    logger.info(f"save dev tale in: {file_path}")
+    with open(save_path, "w") as json_file:
+        json.dump(final_tale, json_file, indent=2)
+
+    logger.info("AI-Generate Dev Tale:")
+    pprint(final_tale)
 
     # logger.info("add documentation to the code")
     # documented_code = add_tales(file_tales, code)
