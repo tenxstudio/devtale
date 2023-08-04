@@ -7,7 +7,7 @@ from langchain.output_parsers import PydanticOutputParser
 from langchain.text_splitter import Language, RecursiveCharacterTextSplitter
 
 from dev_tales.schema import FileDocumentation
-from dev_tales.templates import FILE_LEVEL_TEMPLATE
+from dev_tales.templates import CODE_LEVEL_TEMPLATE, FILE_LEVEL_TEMPLATE
 
 identifiers = {"php": ["class", "function"]}
 
@@ -20,10 +20,19 @@ def split(code, language=Language.PHP, chunk_size=1000, chunk_overlap=0):
     return docs
 
 
+def get_tale_summary(tale, model_name="gpt-3.5-turbo", verbose=False):
+    prompt = PromptTemplate(template=FILE_LEVEL_TEMPLATE, input_variables=["tale"])
+    llm = ChatOpenAI(model_name=model_name)
+    summarizer = LLMChain(llm=llm, prompt=prompt, verbose=verbose)
+
+    tale["file_docstring"] = summarizer.run(str(tale))
+    return tale
+
+
 def get_unit_tale(doc, model_name="gpt-3.5-turbo", verbose=False):
     parser = PydanticOutputParser(pydantic_object=FileDocumentation)
     prompt = PromptTemplate(
-        template=FILE_LEVEL_TEMPLATE,
+        template=CODE_LEVEL_TEMPLATE,
         input_variables=["code"],
         partial_variables={"format_instructions": parser.get_format_instructions()},
     )
