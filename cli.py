@@ -5,6 +5,7 @@ import os
 
 import click
 
+from devtale.constants import ALLOWED_EXTENSIONS, LANGUAGES
 from devtale.utils import (
     fuse_tales,
     get_tale_index,
@@ -15,7 +16,7 @@ from devtale.utils import (
 
 DEFAULT_OUTPUT_PATH = "devtale_demo/"
 DEFAULT_MODEL_NAME = "gpt-3.5-turbo"
-ALLOWED_EXTENSIONS = [".php"]
+
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -102,11 +103,14 @@ def document_file(
 
     logger.info("read dev draft")
     file_name = os.path.basename(file_path)
+    file_ext = os.path.splitext(file_name)[-1]
+    logger.info(f"extension: {file_ext}")
+
     with open(file_path, "r") as file:
         code = file.read()
 
     logger.info("split dev draft ideas")
-    docs = split(code, chunk_size=3000)
+    docs = split(code, language=LANGUAGES[file_ext], chunk_size=3000)
 
     logger.info("create tale sections")
     tales_list = []

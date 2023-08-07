@@ -1,10 +1,9 @@
 import json
-import re
 
 from langchain import LLMChain, PromptTemplate
 from langchain.chat_models import ChatOpenAI
 from langchain.output_parsers import PydanticOutputParser
-from langchain.text_splitter import Language, RecursiveCharacterTextSplitter
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 from devtale.schema import FileDocumentation
 from devtale.templates import (
@@ -13,10 +12,8 @@ from devtale.templates import (
     FOLDER_LEVEL_TEMPLATE,
 )
 
-identifiers = {"php": ["class", "function"]}
 
-
-def split(code, language=Language.PHP, chunk_size=1000, chunk_overlap=0):
+def split(code, language, chunk_size=1000, chunk_overlap=0):
     code_splitter = RecursiveCharacterTextSplitter.from_language(
         language=language, chunk_size=chunk_size, chunk_overlap=0
     )
@@ -63,35 +60,6 @@ def get_unit_tale(doc, model_name="gpt-3.5-turbo", verbose=False):
         empty = {"classes": [], "methods": []}
         return empty
     return result_json
-
-
-def add_tales(docstrings, code, language="php", signature="@AI-generated docstring"):
-    documented_code = code
-    class_identifier = identifiers[language][0]
-    method_identifier = identifiers[language][1]
-
-    # write class-level docstrings
-    for class_info in docstrings["classes"]:
-        class_name = class_info["class_name"]
-        class_docstring = class_info["class_docstring"]
-        documented_code = re.sub(
-            r"(" + class_identifier + "\s+" + re.escape(class_name) + r"\s*\{)",
-            r"/** " + signature + "\n * " + class_docstring + r"\n */\n\1",
-            documented_code,
-            count=1,
-        )
-
-    # write method-level docstrings
-    for method_info in docstrings["methods"]:
-        method_name = method_info["method_name"]
-        method_docstring = method_info["method_docstring"]
-        documented_code = re.sub(
-            r"(" + method_identifier + "\s+" + re.escape(method_name) + r"\s*\()",
-            r"\n/** " + signature + "\n * " + method_docstring + r"\n */\n\1",
-            documented_code,
-        )
-
-    return documented_code
 
 
 def fuse_tales(tales_list):
