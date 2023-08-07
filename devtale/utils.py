@@ -7,7 +7,11 @@ from langchain.output_parsers import PydanticOutputParser
 from langchain.text_splitter import Language, RecursiveCharacterTextSplitter
 
 from devtale.schema import FileDocumentation
-from devtale.templates import CODE_LEVEL_TEMPLATE, FILE_LEVEL_TEMPLATE
+from devtale.templates import (
+    CODE_LEVEL_TEMPLATE,
+    FILE_LEVEL_TEMPLATE,
+    FOLDER_LEVEL_TEMPLATE,
+)
 
 identifiers = {"php": ["class", "function"]}
 
@@ -18,6 +22,14 @@ def split(code, language=Language.PHP, chunk_size=1000, chunk_overlap=0):
     )
     docs = code_splitter.create_documents([code])
     return docs
+
+
+def get_tale_index(tales, model_name="gpt-3.5-turbo", verbose=True):
+    prompt = PromptTemplate(template=FOLDER_LEVEL_TEMPLATE, input_variables=["tales"])
+    llm = ChatOpenAI(model_name=model_name)
+    indixer = LLMChain(llm=llm, prompt=prompt, verbose=verbose)
+
+    return indixer.run(str(tales))
 
 
 def get_tale_summary(tale, model_name="gpt-3.5-turbo", verbose=False):

@@ -8,7 +8,7 @@ class ClassEntities(BaseModel):
     class_docstring: str = Field(
         default=None,
         description="Google Style Docstring text that provides an explanation of the \
-        purpose of the class, class args, and class. All inside the same str.",
+        purpose of the class and its class args. All inside the same str.",
     )
 
 
