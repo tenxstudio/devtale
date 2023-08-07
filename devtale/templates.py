@@ -28,3 +28,22 @@ Code File Info:
  {tale}
 ----------
 """
+
+
+FOLDER_LEVEL_TEMPLATE = """
+Use the following information delimeted by <<< >>> to write a README file:
+
+Start with a descriptive title that clearly indicates the folder's purpose. Follow it \
+up with a brief description that provides an overview of what the folder contains and \
+its intended use.
+
+Provide explanations for each significant file within the folder. The explanations \
+should be one-sentence long.
+
+Add any other relevant information that could be helpful for users or contributors \
+
+Remember that the README should be written in a clear and concise manner, using \
+appropriate formatting, and follow Markdown syntax
+
+<<< {tales} >>>
+"""
