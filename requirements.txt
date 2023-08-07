@@ -20,6 +20,8 @@ charset-normalizer==3.2.0
     # via
     #   aiohttp
     #   requests
+click==8.1.6
+    # via -r requirements.in
 dataclasses-json==0.5.14
     # via langchain
 frozenlist==1.4.0
