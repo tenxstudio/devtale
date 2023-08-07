@@ -6,8 +6,8 @@ from langchain.chat_models import ChatOpenAI
 from langchain.output_parsers import PydanticOutputParser
 from langchain.text_splitter import Language, RecursiveCharacterTextSplitter
 
-from dev_tales.schema import FileDocumentation
-from dev_tales.templates import CODE_LEVEL_TEMPLATE, FILE_LEVEL_TEMPLATE
+from devtale.schema import FileDocumentation
+from devtale.templates import CODE_LEVEL_TEMPLATE, FILE_LEVEL_TEMPLATE
 
 identifiers = {"php": ["class", "function"]}
 

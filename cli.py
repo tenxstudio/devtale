@@ -6,9 +6,9 @@ from pprint import pprint
 
 import click
 
-from dev_tales.utils import fuse_tales, get_tale_summary, get_unit_tale, split
+from devtale.utils import fuse_tales, get_tale_summary, get_unit_tale, split
 
-DEFAULT_OUTPUT_PATH = "dev_tales_demo/"
+DEFAULT_OUTPUT_PATH = "devtale_demo/"
 DEFAULT_MODEL_NAME = "gpt-3.5-turbo"
 
 logging.basicConfig(level=logging.INFO)
