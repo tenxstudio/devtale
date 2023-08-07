@@ -1,4 +1,4 @@
-# dev-tales
+# devtale
 
 Automatically document repositories
 
@@ -7,8 +7,8 @@ Automatically document repositories
 Create and enter to a conda env:
 
 ```bash
-conda create -n dev-tales python=3.11 -y
-conda activate dev-tales
+conda create -n devtale python=3.11 -y
+conda activate devtale
 ```
 
 Install requirements
@@ -23,4 +23,4 @@ pip install -r requirements.txt
 python cli.py -f [path/to/your/code/file]
 ```
 
-Result is JSON file saved in `dev_tales_demo` with the same name as the input file.
+Result is JSON file saved in `devtale_demo` with the same name as the input file.
