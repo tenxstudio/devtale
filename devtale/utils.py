@@ -63,12 +63,14 @@ def get_unit_tale(doc, model_name="gpt-3.5-turbo", verbose=False):
                 json_text = text[start_index : end_index + 1]
                 result_json = json.loads(json_text)
             else:
-                print(f" something else {text}")
+                print(f"Ivalid JSON {text}")
+                print("Returning empty JSON instead")
+                empty = {"classes": [], "methods": []}
+                return empty
         except Exception as e:
             print(
                 f"Error getting the JSON with the docstrings. \
-                Error: {e} \n Result {json_text} \
-                Error2: {result_json}"
+                Error: {e} \n Result {json_text}"
             )
             print("Returning empty JSON instead")
             empty = {"classes": [], "methods": []}
