@@ -1,4 +1,6 @@
 import json
+import re
+from json import JSONDecodeError
 
 from langchain import LLMChain, PromptTemplate
 from langchain.chat_models import ChatOpenAI
@@ -21,7 +23,7 @@ def split(code, language, chunk_size=1000, chunk_overlap=0):
     return docs
 
 
-def get_tale_index(tales, model_name="gpt-3.5-turbo", verbose=True):
+def get_tale_index(tales, model_name="gpt-3.5-turbo", verbose=False):
     prompt = PromptTemplate(template=FOLDER_LEVEL_TEMPLATE, input_variables=["tales"])
     llm = ChatOpenAI(model_name=model_name)
     indixer = LLMChain(llm=llm, prompt=prompt, verbose=verbose)
@@ -51,18 +53,39 @@ def get_unit_tale(doc, model_name="gpt-3.5-turbo", verbose=False):
     result_string = teller_of_tales({"code": doc.page_content})
     try:
         result_json = json.loads(result_string["text"])
-    except Exception as e:
-        print(
-            f"Error getting the JSON with the docstrings. \
-            Error: {e} \n Result {result_string}"
-        )
-        print("Returning empty JSON instead")
-        empty = {"classes": [], "methods": []}
-        return empty
+    except JSONDecodeError:
+        try:
+            text = result_string["text"].replace("\\n", "\n")
+            start_index = text.find("{")
+            end_index = text.rfind("}")
+
+            if start_index != -1 and end_index != -1 and start_index < end_index:
+                json_text = text[start_index : end_index + 1]
+                result_json = json.loads(json_text)
+            else:
+                print(f"Ivalid JSON {text}")
+                print("Returning empty JSON instead")
+                empty = {"classes": [], "methods": []}
+                return empty
+        except Exception as e:
+            print(
+                f"Error getting the JSON with the docstrings. \
+                Error: {e} \n Result {json_text}"
+            )
+            print("Returning empty JSON instead")
+            empty = {"classes": [], "methods": []}
+            return empty
     return result_json
 
 
-def fuse_tales(tales_list):
+def is_hallucination(code_definition, code):
+    # Check if the code_definition exists within the code
+    if re.search(r"\b" + re.escape(code_definition) + r"\b", code):
+        return False
+    return True
+
+
+def fuse_tales(tales_list, code):
     fused_tale = {"classes": [], "methods": []}
     unique_methods = set()
     unique_classes = set()
@@ -71,14 +94,18 @@ def fuse_tales(tales_list):
         if "classes" in tale:
             for class_info in tale["classes"]:
                 class_name = class_info["class_name"]
-                if class_name not in unique_classes:
+                if class_name not in unique_classes and not is_hallucination(
+                    class_name, code
+                ):
                     unique_classes.add(class_name)
                     fused_tale["classes"].append(class_info)
 
         if "methods" in tale:
             for method in tale["methods"]:
                 method_name = method["method_name"]
-                if method_name not in unique_methods:
+                if method_name not in unique_methods and not is_hallucination(
+                    method_name, code
+                ):
                     unique_methods.add(method_name)
                     fused_tale["methods"].append(method)
 

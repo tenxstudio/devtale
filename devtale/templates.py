@@ -1,18 +1,14 @@
 CODE_LEVEL_TEMPLATE = """
-Given the provided code, please perform the following actions:
+Given the provided code text input enclosed within the <<< >>> delimiters, your \
+task is to create well-structured documentation for the classes, methods, and  \
+functions explicitly defined within the code.
+You are not allowed to generate new classes, methods or functions.
+Skip class instances, imported classes, imported methods, method instances.
+Output your answer as a JSON which matches the following output format.
 
-1. Split the code into class definitions and method definitions.
-2. For each class definition, generate a Google Style Docstring text that provides an \
-explanation of the purpose of the class, args and returns.
-3. For each method definition, generate a Google Style Docstring text that provides an \
-explanation of the purpose of the method, args, returns, and raises.
+Ouput format: {format_instructions}
 
-{format_instructions}
-
-Here is the code:
---------
-{code}
---------
+Input: <<< {code} >>>
 """
 
 FILE_LEVEL_TEMPLATE = """
