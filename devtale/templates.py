@@ -1,9 +1,10 @@
 CODE_LEVEL_TEMPLATE = """
-Given the provided code text input enclosed within the <<< >>> delimiters, your task \
-is to create well-structured documentation for the classes, methods, and functions \
-explicitly defined within the code by using their corresponding programming keywords.
-You are not allowed to generate new classes, methods or functions. Use the following \
-output format to answer.
+Given the provided code text input enclosed within the <<< >>> delimiters, your \
+task is to create well-structured documentation for the classes, methods, and  \
+functions explicitly defined within the code.
+You are not allowed to generate new classes, methods or functions.
+Skip class instances, imported classes, imported methods, method instances.
+Output your answer as a JSON which matches the following output format.
 
 Ouput format: {format_instructions}
 

@@ -43,7 +43,7 @@ def process_repository(
 
     for folder_name in folders.keys():
         folder_path = os.path.join(root_path, folder_name)
-        folder_tale = document_folder(folder_path, output_path)
+        folder_tale = process_folder(folder_path, output_path)
         if folder_tale is not None:
             folder_tales.append(
                 {"folder_name": folder_name, "folder_summary": folder_tale}
@@ -58,7 +58,7 @@ def process_repository(
             file.write(root_index)
 
 
-def document_folder(
+def process_folder(
     folder_path: str,
     output_path: str,
     model_name: str = DEFAULT_MODEL_NAME,
@@ -74,7 +74,7 @@ def document_folder(
             and os.path.splitext(filename)[1] in ALLOWED_EXTENSIONS
         ):
             logger.info(f"processing {file_path}")
-            file_tale = document_file(file_path, save_path)
+            file_tale = process_file(file_path, save_path)
 
             tales.append(
                 {"file_name": filename, "file_summary": file_tale["file_docstring"]}
@@ -93,7 +93,7 @@ def document_folder(
     return None
 
 
-def document_file(
+def process_file(
     file_path: str,
     output_path: str = DEFAULT_OUTPUT_PATH,
     model_name: str = DEFAULT_MODEL_NAME,
@@ -120,7 +120,7 @@ def document_file(
         logger.info(f"tale section {str(idx+1)}/{len(docs)} done.")
 
     logger.info("write dev tale")
-    file_tales = fuse_tales(tales_list)
+    file_tales = fuse_tales(tales_list, code)
 
     logger.info("add dev tale summary")
     final_tale = get_tale_summary(file_tales)
@@ -143,11 +143,18 @@ def document_file(
 
 @click.command()
 @click.option(
-    "-r",
-    "--repository-path",
-    "repository_path",
+    "-m",
+    "--mode",
+    type=click.Choice(["-r", "-d", "-f"]),
     required=True,
-    help="The path to the repository",
+    help="Select the mode: -r for repository, -d for folder, -f for file",
+)
+@click.option(
+    "-p",
+    "--path",
+    "path",
+    required=True,
+    help="The path to the repository, folder, or file",
 )
 @click.option(
     "-o",
@@ -155,7 +162,7 @@ def document_file(
     "output_path",
     required=False,
     default=DEFAULT_OUTPUT_PATH,
-    help="The destination folder where you want to save the document file",
+    help="The destination folder where you want to save the documentation outputs",
 )
 @click.option(
     "-n",
@@ -166,13 +173,20 @@ def document_file(
     help="The OpenAI model name you want to use. \
     https://platform.openai.com/docs/models",
 )
-def main(repository_path: str, output_path: str, model_name: str):
+def main(mode: str, path: str, output_path: str, model_name: str):
     if not os.environ.get("OPENAI_API_KEY"):
         os.environ["OPENAI_API_KEY"] = getpass.getpass(
             prompt="Enter your OpenAI API key: "
         )
 
-    process_repository(repository_path, output_path, model_name)
+    if mode == "-r":
+        process_repository(path, output_path, model_name)
+    elif mode == "-d":
+        process_folder(path, output_path, model_name)
+    elif mode == "-f":
+        process_file(path, output_path, model_name)
+    else:
+        raise "Invalid mode. Please select -r (repository), -d (folder), or -f (file)."
 
 
 if __name__ == "__main__":
