@@ -5,6 +5,7 @@ import logging
 import os
 
 import click
+from dotenv import load_dotenv
 
 from devtale.constants import ALLOWED_EXTENSIONS, LANGUAGES
 from devtale.utils import (
@@ -201,6 +202,8 @@ def process_file(
     https://platform.openai.com/docs/models",
 )
 def main(path: str, recursive: bool, output_path: str, model_name: str):
+    load_dotenv()
+
     if not os.environ.get("OPENAI_API_KEY"):
         os.environ["OPENAI_API_KEY"] = getpass.getpass(
             prompt="Enter your OpenAI API key: "
