@@ -1,3 +1,4 @@
+import copy
 import getpass
 import json
 import logging
@@ -7,10 +8,12 @@ import click
 
 from devtale.constants import ALLOWED_EXTENSIONS, LANGUAGES
 from devtale.utils import (
+    extract_code_elements,
     fuse_tales,
     get_tale_index,
-    get_tale_summary,
     get_unit_tale,
+    prepare_code_elements,
+    redact_tale_information,
     split,
 )
 
@@ -110,35 +113,50 @@ def process_file(
         code = file.read()
 
     logger.info("split dev draft ideas")
-    docs = split(code, language=LANGUAGES[file_ext], chunk_size=3000)
+    big_docs = split(code, language=LANGUAGES[file_ext], chunk_size=10000)
+    short_docs = split(code, language=LANGUAGES[file_ext], chunk_size=3000)
+
+    logger.info("extract code elements")
+    code_elements = []
+    for idx, doc in enumerate(big_docs):
+        elements_set = extract_code_elements(doc)
+        if elements_set:
+            code_elements.append(elements_set)
+
+    logger.info("prepare code elements")
+    code_elements_dict = prepare_code_elements(code_elements)
+
+    # Make a copy to keep the original dict intact
+    code_elements_copy = copy.deepcopy(code_elements_dict)
+
+    # clean
+    code_elements_copy.pop("summary", None)
+    if not code_elements_copy["classes"]:
+        code_elements_copy.pop("classes", None)
+    if not code_elements_copy["methods"]:
+        code_elements_copy.pop("methods", None)
 
     logger.info("create tale sections")
     tales_list = []
-    for idx, doc in enumerate(docs):
-        tale = get_unit_tale(doc, model_name=model_name)
-        tales_list.append(tale)
-        logger.info(f"tale section {str(idx+1)}/{len(docs)} done.")
+    # process only if we have elements to document
+    if code_elements_copy:
+        for idx, doc in enumerate(short_docs):
+            tale = get_unit_tale(doc, code_elements_copy, model_name=model_name)
+            tales_list.append(tale)
+            logger.info(f"tale section {str(idx+1)}/{len(short_docs)} done.")
 
     logger.info("write dev tale")
-    file_tales = fuse_tales(tales_list, code)
+    tale = fuse_tales(tales_list, code, code_elements_dict)
 
     logger.info("add dev tale summary")
-    final_tale = get_tale_summary(file_tales)
+    tale["file_docstring"] = redact_tale_information("top-level", code_elements_dict)
 
     save_path = os.path.join(output_path, f"{file_name}.json")
     logger.info(f"save dev tale in: {save_path}")
     with open(save_path, "w") as json_file:
-        json.dump(final_tale, json_file, indent=2)
+        json.dump(tale, json_file, indent=2)
 
-    return final_tale
-
-    # logger.info("add documentation to the code")
-    # documented_code = add_tales(file_tales, code)
-
-    # save_path = os.path.join(output_path, file_name)
-    # logger.info(f"save documented file in {save_path}")
-    # with open(save_path, "w") as file:
-    #    file.write(documented_code)
+    return tale
 
 
 @click.command()
