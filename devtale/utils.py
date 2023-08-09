@@ -90,14 +90,6 @@ def redact_tale_information(content_type, information, verbose=False):
     return teller_of_tales.run(str(information))
 
 
-def get_tale_index(tales, model_name="gpt-3.5-turbo", verbose=False):
-    prompt = PromptTemplate(template=FOLDER_LEVEL_TEMPLATE, input_variables=["tales"])
-    llm = ChatOpenAI(model_name=model_name)
-    indixer = LLMChain(llm=llm, prompt=prompt, verbose=verbose)
-
-    return indixer.run(str(tales))
-
-
 def get_unit_tale(short_doc, code_elements, model_name="gpt-4", verbose=False):
     parser = PydanticOutputParser(pydantic_object=FileDocumentation)
     prompt = PromptTemplate(

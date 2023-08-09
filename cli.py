@@ -10,7 +10,6 @@ from devtale.constants import ALLOWED_EXTENSIONS, LANGUAGES
 from devtale.utils import (
     extract_code_elements,
     fuse_tales,
-    get_tale_index,
     get_unit_tale,
     prepare_code_elements,
     redact_tale_information,
@@ -48,17 +47,22 @@ def process_repository(
         folder_path = os.path.join(root_path, folder_name)
         folder_tale = process_folder(folder_path, output_path)
         if folder_tale is not None:
+            is_root_folder = True if root_path == folder_name else False
             folder_tales.append(
-                {"folder_name": folder_name, "folder_summary": folder_tale}
+                {
+                    "folder_name": folder_name,
+                    "folder_summary": folder_tale,
+                    "is_root_folder": is_root_folder,
+                }
             )
 
     if folder_tales:
-        root_index = get_tale_index(folder_tales)
+        root_readme = redact_tale_information("root-level", folder_tales)
 
         save_path = os.path.join(output_path, root_path)
         logger.info(f"saving root index in {save_path}")
         with open(os.path.join(save_path, "README.md"), "w", encoding="utf-8") as file:
-            file.write(root_index)
+            file.write(root_readme)
 
 
 def process_folder(
@@ -80,19 +84,23 @@ def process_folder(
             file_tale = process_file(file_path, save_path)
 
             tales.append(
-                {"file_name": filename, "file_summary": file_tale["file_docstring"]}
+                {
+                    "folder_name": folder_path,
+                    "file_name": filename,
+                    "file_summary": file_tale["file_docstring"],
+                }
             )
 
     if tales:
-        tales_index = get_tale_index(tales)
+        folder_readme = redact_tale_information("folder-level", tales)
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
         logger.info(f"saving index in {save_path}")
         with open(os.path.join(save_path, "README.md"), "w", encoding="utf-8") as file:
-            file.write(tales_index)
+            file.write(folder_readme)
 
-        return tales_index
+        return folder_readme
     return None
 
 
