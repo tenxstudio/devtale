@@ -15,7 +15,7 @@ from devtale.utils import (
 )
 
 DEFAULT_OUTPUT_PATH = "devtale_demo/"
-DEFAULT_MODEL_NAME = "gpt-3.5-turbo"
+DEFAULT_MODEL_NAME = "gpt-4"
 
 
 logging.basicConfig(level=logging.INFO)
@@ -143,18 +143,19 @@ def process_file(
 
 @click.command()
 @click.option(
-    "-m",
-    "--mode",
-    type=click.Choice(["-r", "-d", "-f"]),
-    required=True,
-    help="Select the mode: -r for repository, -d for folder, -f for file",
-)
-@click.option(
     "-p",
     "--path",
     "path",
     required=True,
     help="The path to the repository, folder, or file",
+)
+@click.option(
+    "-r",
+    "--recursive",
+    "recursive",
+    is_flag=True,
+    default=False,
+    help="Allows to explore subfolders.",
 )
 @click.option(
     "-o",
@@ -173,20 +174,24 @@ def process_file(
     help="The OpenAI model name you want to use. \
     https://platform.openai.com/docs/models",
 )
-def main(mode: str, path: str, output_path: str, model_name: str):
+def main(path: str, recursive: bool, output_path: str, model_name: str):
     if not os.environ.get("OPENAI_API_KEY"):
         os.environ["OPENAI_API_KEY"] = getpass.getpass(
             prompt="Enter your OpenAI API key: "
         )
 
-    if mode == "-r":
-        process_repository(path, output_path, model_name)
-    elif mode == "-d":
-        process_folder(path, output_path, model_name)
-    elif mode == "-f":
+    if os.path.isdir(path):
+        if recursive:
+            logger.info("Processing repository")
+            process_repository(path, output_path, model_name)
+        else:
+            logger.info("Processing folder")
+            process_folder(path, output_path, model_name)
+    elif os.path.isfile(path):
+        logger.info("Processing file")
         process_file(path, output_path, model_name)
     else:
-        raise "Invalid mode. Please select -r (repository), -d (folder), or -f (file)."
+        raise f"Invalid input path {path}. Path must be a directory or code file."
 
 
 if __name__ == "__main__":
