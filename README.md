@@ -20,6 +20,7 @@ pip install -r requirements.txt
 ## Usage
 
 1- Create a `.env` file in the root directory and set your `OPENAI_API_KEY` there.
+
 2- Execute the following command to document a folder or a file:
 
 ```bash
