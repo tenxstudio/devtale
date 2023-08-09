@@ -1,45 +1,104 @@
-CODE_LEVEL_TEMPLATE = """
-Given the provided code text input enclosed within the <<< >>> delimiters, your \
-task is to create well-structured documentation for the classes, methods, and  \
-functions explicitly defined within the code.
-You are not allowed to generate new classes, methods or functions.
-Skip class instances, imported classes, imported methods, method instances.
-Output your answer as a JSON which matches the following output format.
+CODE_EXTRACTOR_TEMPLATE = """
+Given the provided code snippet enclosed within the <<< >>> delimiters, your \
+task is to output the classes and method names that are defined within the code. \
+You must not include classes that are imported.
+Additionally, you should include a concise top-level docstring that summarizes \
+the purpose of the code snippet.
 
-Ouput format: {format_instructions}
+Your output must adhere to the following format:
+classes=["class_name_1", "class_name_2", ...]
+methods=["method_name_1", "method_name_2", ...]
+summary="top-level docstring"
+
+Code: <<< {code} >>>
+"""
+
+CODE_LEVEL_TEMPLATE = """
+Your objective is to generate Google Style docstrings for code elements provided \
+in the input.
+The input consists of two parts:
+
+1. A code snippet enclosed within the <<< >>> delimiters.
+2. A list of code elements (classes and/or methods): "{code_elements}".
+
+Your task involves the following steps:
+
+1. Analyze the provided code snippet to locate and identify the methods and/or \
+classes that are actually defined within the code snippet, based on the list of  \
+code elements.
+2. For each identified code element, generate a Google Style docstring.
+
+Focus only on the code elements that are present and defined within the code snippet.
+
+{format_instructions}
+
+Do not introduce your answer, just output using the above JSON schema.
 
 Input: <<< {code} >>>
 """
 
+
 FILE_LEVEL_TEMPLATE = """
-Using the provided code file info, which contains descriptions of the file classes and \
-methods. Please write a file-level summary/overview that can be added at the top level \
-of the file to briefly explain what this file if for.
+The provided summaries belong to the same code file and have been \
+processed by dividing the code into sections. Utilize these summaries \
+to create a comprehensive final summary that encapsulates the purpose \
+of the file.
 
-The summary should be understandable for non-programmers.
-Do not re-explain what classes and functions it have and what they do.
-
-Code File Info:
+Summaries:
 ----------
- {tale}
+ {information}
 ----------
 """
 
 
 FOLDER_LEVEL_TEMPLATE = """
-Use the following information delimeted by <<< >>> to write a README file:
+Create a clear and concise README by utilizing the provided structure \
+and the information below:
 
-Start with a descriptive title that clearly indicates the folder's purpose. Follow it \
-up with a brief description that provides an overview of what the folder contains and \
-its intended use.
+Folder information: {information}
 
-Provide explanations for each significant file within the folder. The explanations \
-should be one-sentence long.
+Structure:
+-----------
+# <<<folder_name>>> (Always capitalize the initial letter)
 
-Add any other relevant information that could be helpful for users or contributors \
+## Overview
+This section provides an overview of the folder's purpose \
+and objectives by understanding all the file summaries that \
+belong to the same folder.
 
-Remember that the README should be written in a clear and concise manner, using \
-appropriate formatting, and follow Markdown syntax
+## Files
+Here is a list of files contained within this folder, accompanied \
+by concise one-line sentence description of their functionality:
 
-<<< {tales} >>>
+- ** <<<file_name>>> **: One-line sentence description of the file
+functionality.
+
+[//]: # (Repeat the above section for each file_name in the list)
+
+For detailed insights into each file, refer to their respective \
+sections.
+If you have inquiries or need assistance, contact the contributors.
+-----------
+
+Ensure proper formatting and adhere to Markdown syntax guidelines.
+"""
+
+
+ROOT_LEVEL_TEMPLATE = """
+Generate the root README content using the provided readme information \
+enclosed within the <<< >>> delimiters.
+
+1- Extract the project name from the root folder name for the title.
+2- Write a summary overview based on the READMEs from all the folders.
+3- Create a project tree diagram that outlines the files in each folder.
+
+Please ensure that the generated README adheres to Markdown syntax guidelines \
+and includes the following three sections:
+
+Title (based on the ROOT folder name)
+Description (overview based on folder summaries)
+Project Tree (tree diagram of files in each folder) with one sentence \
+description of its purpose.
+
+Here is readme information: <<< {information} >>>
 """
