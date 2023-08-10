@@ -97,10 +97,14 @@ enclosed within the <<< >>> delimiters.
 Please ensure that the generated README adheres to Markdown syntax guidelines \
 and includes the following three sections:
 
-Title (based on the ROOT folder name)
-Description (overview based on folder summaries)
-Project Tree (tree diagram of files in each folder) with one sentence \
-description of its purpose.
+-Title (based on the root folder name)
+-Description (one-line sentence of what the code does based on all the \
+information).
+-Overview (overview based on folder summaries)
+-Project Tree (tree diagram of files in each folder).This project tree should \
+be inside a bash code section (```bash project tree ```) with branching.
+-Scripts (List of root CLI files with one-sentence description of \
+its purpose, if any, otherwise do not display this section).
 
 Here is readme information: <<< {information} >>>
 """
