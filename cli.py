@@ -83,14 +83,14 @@ def process_folder(
         ):
             logger.info(f"processing {file_path}")
             file_tale = process_file(file_path, save_path)
-
-            tales.append(
-                {
-                    "folder_name": folder_path,
-                    "file_name": filename,
-                    "file_summary": file_tale["file_docstring"],
-                }
-            )
+            if file_tale["file_docstring"]:
+                tales.append(
+                    {
+                        "folder_name": folder_path,
+                        "file_name": filename,
+                        "file_summary": file_tale["file_docstring"],
+                    }
+                )
 
     if tales:
         folder_readme = redact_tale_information("folder-level", tales)
@@ -120,6 +120,9 @@ def process_file(
 
     with open(file_path, "r") as file:
         code = file.read()
+
+    if not code:
+        return {"file_docstring": ""}
 
     logger.info("split dev draft ideas")
     big_docs = split(code, language=LANGUAGES[file_ext], chunk_size=10000)
