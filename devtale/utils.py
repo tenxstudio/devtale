@@ -114,12 +114,10 @@ def get_unit_tale(short_doc, code_elements, model_name="gpt-4", verbose=False):
 
             if start_index != -1 and end_index != -1 and start_index < end_index:
                 json_text = text[start_index : end_index + 1]
-                result_json = json.loads(json_text)
-            else:
-                print(f"Ivalid JSON {text}")
-                print("Returning empty JSON instead")
-                empty = {"classes": [], "methods": []}
-                return empty
+
+            json_text = _add_escape_characters(json_text)
+            result_json = json.loads(json_text)
+
         except Exception as e:
             print(
                 f"Error getting the JSON with the docstrings. \
@@ -167,3 +165,14 @@ def fuse_tales(tales_list, code, code_elements_dict):
                     fused_tale["methods"].append(method)
 
     return fused_tale
+
+
+def _add_escape_characters(invalid_json):
+    control_char_pattern = re.compile(r"[\x00-\x1F\x7F-\x9F]")
+    unescaped_chars = control_char_pattern.findall(invalid_json)
+
+    # Escape the unescaped control characters
+    for char in unescaped_chars:
+        json_string = invalid_json.replace(char, "\\u{:04x}".format(ord(char)))
+
+    return json_string

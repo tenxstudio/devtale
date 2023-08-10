@@ -29,10 +29,12 @@ code elements.
 2. For each identified code element, generate a Google Style docstring.
 
 Focus only on the code elements that are present and defined within the code snippet.
+And please refrain from including docstrings within the code.
 
 {format_instructions}
 
-Do not introduce your answer, just output using the above JSON schema.
+Do not introduce your answer, just output using the above JSON schema, and always \
+use escaped newlines.
 
 Input: <<< {code} >>>
 """
