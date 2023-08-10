@@ -48,7 +48,10 @@ def process_repository(
         folder_path = os.path.join(root_path, folder_name)
         folder_tale = process_folder(folder_path, output_path)
         if folder_tale is not None:
-            is_root_folder = True if root_path == folder_name else False
+            is_root_folder = False
+            if folder_name == root_path or folder_name == "":
+                folder_name = os.path.basename(os.path.abspath(root_path))
+                is_root_folder = True
             folder_tales.append(
                 {
                     "folder_name": folder_name,
