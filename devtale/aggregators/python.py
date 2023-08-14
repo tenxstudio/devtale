@@ -33,10 +33,25 @@ class pythonAggregator:
             pattern = r"" + prefix + "\s+" + name + "[\s\S]*? " + postfix
             type_item = "method" if prefix == "def" else "class"
             docstring = self._get_docstring(type_item, name, documentation)
-
+            comment = f'\n"""{docstring}"""'
             match = re.findall(pattern, documented_code)[0]
-            modified_match = match + f'\n"""{docstring}"""'
-            documented_code = re.sub(re.escape(match), modified_match, documented_code)
+
+            # use ast to reformat code into lines, trick to make the search easier
+            parsed_text = ast.parse(code)
+            unparsed_text = ast.unparse(parsed_text)
+
+            indentation_size = self._extract_indentation(unparsed_text, definition)
+
+            # add identation to the docstrings
+            lines = comment.split("\n")
+            indented_lines = [
+                f"{' ' * indentation_size}{line}" if line.strip() else line
+                for line in lines
+            ]
+            comment = "\n".join(indented_lines)
+
+            # add the docstring
+            documented_code = re.sub(re.escape(match), match + comment, documented_code)
 
         return documented_code
 
@@ -81,3 +96,15 @@ class pythonAggregator:
             if class_info:
                 return class_info["class_docstring"]
         return ""
+
+    def _extract_indentation(self, text, code_line):
+        lines = text.split("\n")
+        next_code_line = None
+
+        for idx, line in enumerate(lines):
+            if code_line in line:
+                next_code_line = lines[idx + 1]
+                break
+
+        indentation_size = len(next_code_line) - len(next_code_line.lstrip())
+        return indentation_size
