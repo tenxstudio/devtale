@@ -1,6 +1,6 @@
-# devtale
+ # devtale
 
-Generate documentation for entire repositories, single folders, and/or code files.
+Generate full documentation for your code repos.
 
 ## Installation
 
@@ -19,22 +19,20 @@ pip install -r requirements.txt
 
 ## Usage
 
-1- Create a `.env` file in the root directory and set your `OPENAI_API_KEY` there.\n
-
-2- Execute the following command to document a folder or a file:
-
-```bash
-python cli.py -p [path/to/your/code/file/or/folder] -o [path/to/save/output/docs]
-```
-
-To document the code for an entire repository, include the `-r` flag.
-
 > Note: only Python and PHP files are supported at the moment.
 
-## GPT Consumption
+devtale currently supports only OpenAI's GPT.
 
-We found that `gpt-3.5*` encounters limitations when tasked with extracting specific code components. This constraint compelled us to upgrade the model to `gpt-4` for the purpose of extracting code components and generating docstrings.
+- Create a `.env` file in the root directory and set your `OPENAI_API_KEY` there.
 
-Using `gpt-4` for extraction is essential. As for generating docstrings, you can select another model and employ the `GPT-3.5*` version to decrease costs. However, please be cautious, as altering the version for docstring generation might lead to corrupted outcomes.
+- Run the following to document a file or all file in directory:
 
-For generating top-level file summaries, folder-level READMEs, and the main README, we are utilizing the `text-davinci-003` model.
+```bash
+python cli.py -p [path/to/your/code] -o [path/to/docs]
+```
+
+To document an entire repository include the `-r` (recursive) flag.
+
+### Dependency on GPT-4
+
+We found that `GPT-3.5` can't extract code components and generate docstring in a reliable manner, while `GPT-4` can do so. Hence, devtale currently only works with `GPT-4`. Beware that the cost associated to run devtale on a large code repositive may be prohibitive. To reduce this cost, devtale uses `text-davinci-003` for generating top-level file summaries and README files.
