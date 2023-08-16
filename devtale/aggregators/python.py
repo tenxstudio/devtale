@@ -16,7 +16,7 @@ class Placeholder(ast.NodeTransformer):
         return node
 
 
-class pythonAggregator:
+class PythonAggregator:
     def __init__(self):
         pass
 
