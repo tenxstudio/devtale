@@ -7,9 +7,18 @@ class PHPAggregator:
 
     def document(self, documentation, code):
         documented_code = code
+        documented_code = self._document_file(documentation, documented_code)
         documented_code = self._document_functions(documentation, documented_code)
         documented_code = self._document_classes(documentation, documented_code)
         return documented_code
+
+    def _document_file(self, documentation, code):
+        file_description = documentation["file_docstring"]
+        docstring = self._format_docstring(file_description, 0)
+
+        code = docstring + "\n" + code
+
+        return code
 
     def _document_functions(self, documentation, code):
         for method_data in documentation["methods"]:
