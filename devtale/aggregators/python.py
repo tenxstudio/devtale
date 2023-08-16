@@ -21,6 +21,7 @@ class PythonAggregator:
         pass
 
     def document(self, documentation, code):
+        code = self._add_file_level_docstring(code, documentation)
         code_w_placeholders = self._add_placeholders(code)
         code_definitions = self._get_code_definitions(code_w_placeholders)
         documented_code = code
@@ -54,6 +55,14 @@ class PythonAggregator:
             documented_code = re.sub(re.escape(match), match + comment, documented_code)
 
         return documented_code
+
+    def _add_file_level_docstring(self, code: str, documentation):
+        file_description = documentation["file_docstring"]
+        docstring = f'"""{file_description}\n"""\n'
+
+        code = docstring + "\n" + code
+
+        return code
 
     def _add_placeholders(self, code: str):
         code_tree = ast.parse(code)
