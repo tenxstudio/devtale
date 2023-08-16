@@ -40,9 +40,15 @@ class PHPAggregator:
                     insertion_index = None
 
                 if insertion_index:
-                    php_docstring = self._format_docstring(method_docstring)
+                    indentation = self._extract_indentation(code, match.group(0))
+                    php_docstring = self._format_docstring(
+                        method_docstring, indentation
+                    )
                     code = (
-                        code[:insertion_index] + php_docstring + code[insertion_index:]
+                        code[:insertion_index]
+                        + php_docstring
+                        + " " * indentation
+                        + code[insertion_index:]
                     )
         return code
 
@@ -55,14 +61,38 @@ class PHPAggregator:
             match = pattern.search(code)
 
             if match:
-                php_docstring = self._format_docstring(class_docstring)
-                code = code[: match.start()] + php_docstring + code[match.start() :]
+                indentation = self._extract_indentation(code, match.group(0))
+                php_docstring = self._format_docstring(class_docstring, indentation)
+                code = (
+                    code[: match.start()]
+                    + php_docstring
+                    + " " * indentation
+                    + code[match.start() :]
+                )
         return code
 
-    def _format_docstring(self, docstring):
+    def _format_docstring(self, docstring, indentation):
         lines = docstring.split("\n")
-        php_docstring = "\n/**\n"
+        php_docstring = "\n" + " " * indentation + "/**\n"
         for line in lines:
-            php_docstring += " * " + line.strip() + "\n"
-        php_docstring += " */\n"
+            php_docstring += " " * indentation + " * " + line.strip() + "\n"
+        php_docstring += " " * indentation + " */\n"
         return php_docstring
+
+    def _extract_indentation(self, text, code_line):
+        lines = text.split("\n")
+        match_line = None
+        for line in lines:
+            if code_line in line:
+                match_line = line
+                break
+        indentation = 0
+        if match_line:
+            for char in match_line:
+                if char == "\t":
+                    indentation += 4
+                elif char == " ":
+                    indentation += 1
+                else:
+                    break
+        return indentation
