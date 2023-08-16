@@ -19,9 +19,7 @@ pip install -r requirements.txt
 
 ## Usage
 
-> Note: only Python and PHP files are supported at the moment.
-
-devtale currently supports only OpenAI's GPT.
+> Note: currently, devtale only supports Python and PHP languages and GPT-4 as LLM.
 
 - Create a `.env` file in the root directory and set your `OPENAI_API_KEY` there.
 
