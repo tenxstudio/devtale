@@ -73,11 +73,11 @@ def process_repository(
 
 def process_folder(
     folder_path: str,
-    output_path: str,
+    output_path: str = DEFAULT_OUTPUT_PATH,
     model_name: str = DEFAULT_MODEL_NAME,
     fuse: bool = False,
 ) -> None:
-    save_path = os.path.join(output_path, folder_path)
+    save_path = os.path.join(output_path, os.path.basename(folder_path))
     tales = []
 
     for filename in os.listdir(folder_path):
@@ -232,7 +232,13 @@ def process_file(
     help="The OpenAI model name you want to use. \
     https://platform.openai.com/docs/models",
 )
-def main(path: str, recursive: bool, fuse: bool, output_path: str, model_name: str):
+def main(
+    path: str,
+    recursive: bool,
+    fuse: bool,
+    output_path: str = DEFAULT_OUTPUT_PATH,
+    model_name: str = DEFAULT_MODEL_NAME,
+):
     load_dotenv()
 
     if not os.environ.get("OPENAI_API_KEY"):
