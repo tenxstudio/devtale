@@ -1,4 +1,4 @@
- # devtale
+# devtale
 
 Generate full documentation for your code repos.
 
@@ -31,7 +31,7 @@ devtale currently supports only OpenAI's GPT.
 python cli.py -p [path/to/your/code] -o [path/to/docs]
 ```
 
-To document an entire repository include the `-r` (recursive) flag.
+To document an entire repository include the `-r` (recursive) flag. The program returns a JSON file per code file with the documentation data; If you want to also add the documentation inside a copy of code file, then please include the `-f` (fuse) flag.
 
 ### Dependency on GPT-4
 

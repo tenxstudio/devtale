@@ -7,6 +7,7 @@ import os
 import click
 from dotenv import load_dotenv
 
+from devtale.aggregators import PHPAggregator, PythonAggregator
 from devtale.constants import ALLOWED_EXTENSIONS, LANGUAGES
 from devtale.utils import (
     extract_code_elements,
@@ -29,6 +30,7 @@ def process_repository(
     root_path: str,
     output_path: str = DEFAULT_OUTPUT_PATH,
     model_name: str = DEFAULT_MODEL_NAME,
+    fuse: bool = False,
 ) -> None:
     folders = {}
     folder_tales = []
@@ -46,7 +48,7 @@ def process_repository(
 
     for folder_name in folders.keys():
         folder_path = os.path.join(root_path, folder_name)
-        folder_tale = process_folder(folder_path, output_path)
+        folder_tale = process_folder(folder_path, output_path, model_name, fuse)
         if folder_tale is not None:
             is_root_folder = False
             if folder_name == root_path or folder_name == "":
@@ -71,10 +73,11 @@ def process_repository(
 
 def process_folder(
     folder_path: str,
-    output_path: str,
+    output_path: str = DEFAULT_OUTPUT_PATH,
     model_name: str = DEFAULT_MODEL_NAME,
+    fuse: bool = False,
 ) -> None:
-    save_path = os.path.join(output_path, folder_path)
+    save_path = os.path.join(output_path, os.path.basename(folder_path))
     tales = []
 
     for filename in os.listdir(folder_path):
@@ -85,7 +88,7 @@ def process_folder(
             and os.path.splitext(filename)[1] in ALLOWED_EXTENSIONS
         ):
             logger.info(f"processing {file_path}")
-            file_tale = process_file(file_path, save_path)
+            file_tale = process_file(file_path, save_path, model_name, fuse)
             if file_tale["file_docstring"]:
                 tales.append(
                     {
@@ -112,6 +115,7 @@ def process_file(
     file_path: str,
     output_path: str = DEFAULT_OUTPUT_PATH,
     model_name: str = DEFAULT_MODEL_NAME,
+    fuse: bool = False,
 ) -> None:
     if not os.path.exists(output_path):
         os.makedirs(output_path)
@@ -171,6 +175,19 @@ def process_file(
     with open(save_path, "w") as json_file:
         json.dump(tale, json_file, indent=2)
 
+    if fuse:
+        save_path = os.path.join(output_path, file_name)
+        logger.info(f"fuse dev tale in code file {save_path}")
+
+        if file_ext == ".py":
+            aggregator = PythonAggregator()
+        elif file_ext == ".php":
+            aggregator = PHPAggregator()
+
+        fused_tale = aggregator.document(code=code, documentation=tale)
+        with open(save_path, "w") as file:
+            file.write(fused_tale)
+
     return tale
 
 
@@ -191,6 +208,14 @@ def process_file(
     help="Allows to explore subfolders.",
 )
 @click.option(
+    "-f",
+    "--fuse",
+    "fuse",
+    is_flag=True,
+    default=False,
+    help="Adds the docstrings inside the code file.",
+)
+@click.option(
     "-o",
     "--output-path",
     "output_path",
@@ -207,7 +232,13 @@ def process_file(
     help="The OpenAI model name you want to use. \
     https://platform.openai.com/docs/models",
 )
-def main(path: str, recursive: bool, output_path: str, model_name: str):
+def main(
+    path: str,
+    recursive: bool,
+    fuse: bool,
+    output_path: str = DEFAULT_OUTPUT_PATH,
+    model_name: str = DEFAULT_MODEL_NAME,
+):
     load_dotenv()
 
     if not os.environ.get("OPENAI_API_KEY"):
@@ -218,13 +249,13 @@ def main(path: str, recursive: bool, output_path: str, model_name: str):
     if os.path.isdir(path):
         if recursive:
             logger.info("Processing repository")
-            process_repository(path, output_path, model_name)
+            process_repository(path, output_path, model_name, fuse)
         else:
             logger.info("Processing folder")
-            process_folder(path, output_path, model_name)
+            process_folder(path, output_path, model_name, fuse)
     elif os.path.isfile(path):
         logger.info("Processing file")
-        process_file(path, output_path, model_name)
+        process_file(path, output_path, model_name, fuse)
     else:
         raise f"Invalid input path {path}. Path must be a directory or code file."
 
