@@ -85,7 +85,7 @@ def process_repository(
         tree = f"\n\n## Project Tree\n```bash\n{project_tree}```\n\n"
         root_readme = root_readme + tree
 
-        save_path = os.path.join(output_path, root_path)
+        save_path = os.path.join(output_path, os.path.basename(root_path))
         logger.info(f"saving root index in {save_path}")
         with open(os.path.join(save_path, "README.md"), "w", encoding="utf-8") as file:
             file.write(root_readme)
