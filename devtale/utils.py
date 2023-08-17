@@ -1,6 +1,8 @@
 import json
+import os
 import re
 from json import JSONDecodeError
+from pathlib import Path
 
 from langchain import LLMChain, OpenAI, PromptTemplate
 from langchain.chat_models import ChatOpenAI
@@ -176,3 +178,30 @@ def _add_escape_characters(invalid_json):
         json_string = invalid_json.replace(char, "\\u{:04x}".format(ord(char)))
 
     return json_string
+
+
+def _should_ignore(path, gitignore_patterns):
+    path = Path(path)
+    for pattern in gitignore_patterns:
+        if path.match(pattern) or any(p.match(pattern) for p in path.parents):
+            return True
+    return False
+
+
+def build_project_tree(root_dir, indent="", gitignore_patterns=None):
+    if gitignore_patterns is None:
+        gitignore_patterns = []
+
+    tree = ""
+    items = [item for item in os.listdir(root_dir) if not item.startswith(".")]
+    for index, item in enumerate(sorted(items)):
+        item_path = os.path.join(root_dir, item)
+        if _should_ignore(item_path, gitignore_patterns):
+            continue
+        if os.path.isdir(item_path):
+            tree += indent + "├── " + item + "\n"
+            subtree = build_project_tree(item_path, indent + "│   ", gitignore_patterns)
+            tree += subtree
+        else:
+            tree += indent + "└── " + item + "\n"
+    return tree

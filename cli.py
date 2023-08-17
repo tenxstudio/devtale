@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 from devtale.aggregators import PHPAggregator, PythonAggregator
 from devtale.constants import ALLOWED_EXTENSIONS, LANGUAGES
 from devtale.utils import (
+    build_project_tree,
     extract_code_elements,
     fuse_tales,
     get_unit_tale,
@@ -64,6 +65,25 @@ def process_repository(
 
     if folder_tales:
         root_readme = redact_tale_information("root-level", folder_tales)
+
+        # get project structure
+        gitignore_path = os.path.join(root_path, ".gitignore")
+        if os.path.exists(gitignore_path):
+            with open(gitignore_path, "r") as gitignore_file:
+                gitignore_patterns = [
+                    line.strip() for line in gitignore_file if line.strip()
+                ]
+        else:
+            gitignore_patterns = None
+
+        project_tree = build_project_tree(
+            root_path, gitignore_patterns=gitignore_patterns
+        )
+        project_tree = ".\n" + project_tree
+
+        # inject project tree
+        tree = f"\n\n## Project Tree\n```bash\n{project_tree}```\n\n"
+        root_readme = root_readme + tree
 
         save_path = os.path.join(output_path, root_path)
         logger.info(f"saving root index in {save_path}")

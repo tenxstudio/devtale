@@ -92,17 +92,14 @@ enclosed within the <<< >>> delimiters.
 
 1- Extract the project name from the root folder name for the title.
 2- Write a summary overview based on the READMEs from all the folders.
-3- Create a project tree diagram that outlines the files in each folder.
 
 Please ensure that the generated README adheres to Markdown syntax guidelines \
-and includes the following three sections:
+and includes the following sections:
 
 -Title (based on the root folder name)
 -Description (one-line sentence of what the code does based on all the \
 information).
 -Overview (overview based on folder summaries)
--Project Tree (tree diagram of files in each folder).This project tree should \
-be inside a bash code section (```bash project tree ```) with branching.
 -Scripts (List of root CLI files with one-sentence description of \
 its purpose, if any, otherwise do not display this section).
 
