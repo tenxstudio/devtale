@@ -34,6 +34,7 @@ class PythonAggregator:
             pattern = r"" + prefix + "\s+" + name + "[\s\S]*? " + postfix
             type_item = "method" if prefix == "def" else "class"
             docstring = self._get_docstring(type_item, name, documentation)
+            docstring = self._fix_docstring(docstring)
             comment = f'\n"""{docstring}"""'
             match = re.findall(pattern, documented_code)[0]
 
@@ -57,7 +58,7 @@ class PythonAggregator:
         return documented_code
 
     def _add_file_level_docstring(self, code: str, documentation):
-        file_description = documentation["file_docstring"]
+        file_description = self._break_large_strings(documentation["file_docstring"])
         docstring = f'"""{file_description}\n"""\n'
 
         code = docstring + "\n" + code
@@ -117,3 +118,34 @@ class PythonAggregator:
 
         indentation_size = len(next_code_line) - len(next_code_line.lstrip())
         return indentation_size
+
+    def _break_large_strings(self, string, max_lenght=90):
+        words = string.split()
+        lines = []
+        current_line = ""
+        for word in words:
+            if len(current_line) + len(word) + 1 <= max_lenght:
+                if current_line:
+                    current_line += " "
+                current_line += word
+            else:
+                lines.append(current_line)
+                current_line = word
+        if current_line:
+            lines.append(current_line)
+
+        return "\n".join(lines)
+
+    def _fix_docstring(self, docstring):
+        pattern = r"^(.*?)(?=Args:|Returns:|$)"
+        match = re.search(pattern, docstring, re.DOTALL)
+        if match:
+            extracted_summary = match.group(1).strip()
+            fixed_extracted_summary = self._break_large_strings(extracted_summary)
+
+            rest_of_docstring = docstring[match.end() :]
+
+            fixed_docstring = fixed_extracted_summary + "\n\n" + rest_of_docstring
+            return fixed_docstring
+        else:
+            return ""
