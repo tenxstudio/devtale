@@ -13,7 +13,7 @@ class PHPAggregator:
         return documented_code
 
     def _document_file(self, documentation, code):
-        file_description = documentation["file_docstring"]
+        file_description = self._break_large_strings(documentation["file_docstring"])
         docstring = self._format_docstring(file_description, 0)
 
         code = docstring + "\n" + code
@@ -50,6 +50,7 @@ class PHPAggregator:
 
                 if insertion_index:
                     indentation = self._extract_indentation(code, match.group(0))
+                    method_docstring = self._fix_docstring(method_docstring)
                     php_docstring = self._format_docstring(
                         method_docstring, indentation
                     )
@@ -71,6 +72,7 @@ class PHPAggregator:
 
             if match:
                 indentation = self._extract_indentation(code, match.group(0))
+                class_docstring = self._fix_docstring(class_docstring)
                 php_docstring = self._format_docstring(class_docstring, indentation)
                 code = (
                     code[: match.start()]
@@ -105,3 +107,34 @@ class PHPAggregator:
                 else:
                     break
         return indentation
+
+    def _break_large_strings(self, string, max_lenght=90):
+        words = string.split()
+        lines = []
+        current_line = ""
+        for word in words:
+            if len(current_line) + len(word) + 1 <= max_lenght:
+                if current_line:
+                    current_line += " "
+                current_line += word
+            else:
+                lines.append(current_line)
+                current_line = word
+        if current_line:
+            lines.append(current_line)
+
+        return "\n".join(lines)
+
+    def _fix_docstring(self, docstring):
+        pattern = r"^(.*?)(?=Args:|Returns:|$)"
+        match = re.search(pattern, docstring, re.DOTALL)
+        if match:
+            extracted_summary = match.group(1).strip()
+            fixed_extracted_summary = self._break_large_strings(extracted_summary)
+
+            rest_of_docstring = docstring[match.end() :]
+
+            fixed_docstring = fixed_extracted_summary + "\n\n" + rest_of_docstring
+            return fixed_docstring
+        else:
+            return ""
