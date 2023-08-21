@@ -41,16 +41,14 @@ Input: <<< {code} >>>
 
 
 FILE_LEVEL_TEMPLATE = """
-The provided summaries belong to the same code file and the summaries have been \
-processed by dividing the code file into sections, so each summary is for a section.
-That means that the summaries are complementary. \
-Utilize the provided summaries to create a comprehensive final summary that \
-encapsulates the purpose of the complete code file.
+The following summaries enclosed within the <<< >>> delimeters are derived from the \
+same code file. Write a top-file level docstring that combines them into a concise  \
+final summary that effectively captures the overall purpose and functionality of the \
+entire code file.
 
-Summaries:
-----------
- {information}
-----------
+Summaries: <<< {information} >>>
+
+Ensure your final summary is no longer than three sentences.
 """
 
 
@@ -61,29 +59,30 @@ and the information below:
 Folder information: {information}
 
 Structure:
------------
+----------
 # <<<folder_name>>> (Always capitalize the initial letter)
 
 ## Overview
-This section provides an overview of the folder's purpose \
+(This section provides an overview of the folder's purpose \
 and objectives by understanding all the file summaries that \
-belong to the same folder.
+belong to the same folder.)
 
 ## Files
-Here is a list of files contained within this folder, accompanied \
-by concise one-line sentence description of their functionality:
+(Here is a list of files contained within this folder, accompanied \
+by concise one-line sentence description of their functionality)
 
-- ** <<<file_name>>> **: One-line sentence description of the file
-functionality.
+- ** <<<file_name>>> **: Concise one-line summary of the file's \
+operational purpose.
 
 [//]: # (Repeat the above section for each file_name in the list)
 
 For detailed insights into each file, refer to their respective \
 sections.
 If you have inquiries or need assistance, contact the contributors.
------------
+----------
 
 Ensure proper formatting and adhere to Markdown syntax guidelines.
+Output your answer as a JSON with the keys: folder_overview, folder_readme
 """
 
 

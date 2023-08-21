@@ -78,7 +78,7 @@ def process_repository(
             )
 
     if folder_tales:
-        root_readme = redact_tale_information("root-level", folder_tales)
+        root_readme = redact_tale_information("root-level", folder_tales)["text"]
 
         # inject project tree
         tree = f"\n\n## Project Tree\n```bash\n{project_tree}```\n\n"
@@ -118,13 +118,16 @@ def process_folder(
                 )
 
     if tales:
-        folder_readme = redact_tale_information("folder-level", tales)
+        files_summaries = split_text(str(tales), chunk_size=15000)
+        folder_readme = redact_tale_information(
+            "folder-level", files_summaries, model_name="gpt-3.5-turbo-16k"
+        )
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
         logger.info(f"saving index in {save_path}")
         with open(os.path.join(save_path, "README.md"), "w", encoding="utf-8") as file:
-            file.write(folder_readme)
+            file.write(folder_readme["folder_readme"].replace("----------", ""))
 
         return folder_readme
     return None
@@ -188,9 +191,7 @@ def process_file(
 
     logger.info("add dev tale summary")
     summaries = split_text(str(code_elements_dict["summary"]), chunk_size=9000)
-    tale["file_docstring"] = redact_tale_information(
-        "top-level", summaries[0].page_content
-    )
+    tale["file_docstring"] = redact_tale_information("top-level", summaries)["text"]
 
     if fuse:
         save_path = os.path.join(output_path, file_name)
