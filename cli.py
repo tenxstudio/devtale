@@ -201,8 +201,14 @@ def process_file(
             tales_list.append(tale)
             logger.info(f"tale section {str(idx+1)}/{len(short_docs)} done.")
 
-    logger.info("write dev tale")
-    tale = fuse_tales(tales_list, code, code_elements_dict)
+    logger.info("create dev tale")
+    tale, errors = fuse_tales(tales_list, code, code_elements_dict)
+
+    if len(errors) > 0:
+        logger.info(
+            f"We encountered errors while fusing the following \
+                    tales for {file_name} - Corrupted tales: {errors}"
+        )
 
     logger.info("add dev tale summary")
     summaries = split_text(str(code_elements_dict["summary"]), chunk_size=9000)
