@@ -190,7 +190,7 @@ def process_file(
 
     if fuse:
         save_path = os.path.join(output_path, file_name)
-        logger.info(f"save fused dev tale in code file {save_path}")
+        logger.info(f"save fused dev tale in: {save_path}")
 
         if file_ext == ".py":
             aggregator = PythonAggregator()
