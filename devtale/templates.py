@@ -85,23 +85,37 @@ Ensure proper formatting and adhere to Markdown syntax guidelines.
 Output your answer as a JSON with the keys: folder_overview, folder_readme
 """
 
-
 ROOT_LEVEL_TEMPLATE = """
-Generate the root README content using the provided readme information \
-enclosed within the <<< >>> delimiters.
+Generate a markdown text using the enclosed \
+information within the <<< >>> delimiters as your context. \
+Your output must strictly follow the provided structure below \
+without adding any other section.
 
-1- Extract the project name from the root folder name for the title.
-2- Write a summary overview based on the READMEs from all the folders.
+This is the structure your output should have:
+Structure:
+----------
+# <<<repository_name>>> (Please ensure that the initial letter \
+is capitalized)
 
-Please ensure that the generated README adheres to Markdown syntax guidelines \
-and includes the following sections:
+## Description
+(Provide a concise one-line sentence that describes the primary \
+purpose of the code, utilizing all the contextual details \
+available.)
 
--Title (based on the root folder name)
--Description (one-line sentence of what the code does based on all the \
-information).
--Overview (overview based on folder summaries)
--Scripts (List of root CLI files with one-sentence description of \
-its purpose, if any, otherwise do not display this section).
+## Overview
+(In this section, your task is to create a single, well-structured \
+paragraph that concisely communicates the reasons behind the \
+repository's creation, its objectives, and the mechanics underlying \
+its functionality.)
 
-Here is readme information: <<< {information} >>>
+## Scripts
+(Enumerate the names of root CLI files. Include a one-line sentence \
+description for each file, detailing its intended purpose. If \
+there are no relevant files, omit this section entirely.
+----------
+
+Repository information: <<< {information} >>>
+
+Ensure proper formatting and adhere to Markdown syntax guidelines.
+Do not add sections that are not listed in the provided structure.
 """
