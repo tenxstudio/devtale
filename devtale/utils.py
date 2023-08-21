@@ -25,9 +25,17 @@ TYPE_INFORMATION = {
 }
 
 
-def split(code, language, chunk_size=1000, chunk_overlap=0):
+def split_text(text, chunk_size=1000, chunk_overlap=0):
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size, chunk_overlap=chunk_overlap
+    )
+    docs = text_splitter.create_documents([text])
+    return docs
+
+
+def split_code(code, language, chunk_size=1000, chunk_overlap=0):
     code_splitter = RecursiveCharacterTextSplitter.from_language(
-        language=language, chunk_size=chunk_size, chunk_overlap=0
+        language=language, chunk_size=chunk_size, chunk_overlap=chunk_overlap
     )
     docs = code_splitter.create_documents([code])
     return docs
@@ -83,13 +91,51 @@ def prepare_code_elements(code_elements):
     return elements
 
 
-def redact_tale_information(content_type, information, verbose=False):
+def redact_tale_information(
+    content_type, docs, verbose=False, model_name="text-davinci-003"
+):
     prompt = PromptTemplate(
         template=TYPE_INFORMATION[content_type], input_variables=["information"]
     )
-    teller_of_tales = LLMChain(llm=OpenAI(), prompt=prompt, verbose=verbose)
+    teller_of_tales = LLMChain(
+        llm=OpenAI(model_name=model_name), prompt=prompt, verbose=verbose
+    )
+    information = str(docs[0].page_content)
 
-    return teller_of_tales.run(str(information))
+    text_answer = teller_of_tales({"information": information})
+
+    if content_type == "folder-level":
+        json_answer = convert_to_json(text_answer)
+        if not json_answer:
+            print("Returning empty JSON due to a failure")
+            json_answer = {"folder_overview": "", "folder_readme": ""}
+        return json_answer
+
+    return text_answer
+
+
+def convert_to_json(text_answer):
+    try:
+        result_json = json.loads(text_answer["text"])
+    except JSONDecodeError:
+        try:
+            text = text_answer["text"].replace("\\n", "\n")
+            start_index = text.find("{")
+            end_index = text.rfind("}")
+
+            if start_index != -1 and end_index != -1 and start_index < end_index:
+                json_text = text[start_index : end_index + 1]
+
+            json_text = _add_escape_characters(json_text)
+            result_json = json.loads(json_text)
+
+        except Exception as e:
+            print(
+                f"Error getting the JSON. \
+                Error: {e} \n Result: {text_answer['text']}"
+            )
+            return None
+    return result_json
 
 
 def get_unit_tale(short_doc, code_elements, model_name="gpt-4", verbose=False):
@@ -106,29 +152,11 @@ def get_unit_tale(short_doc, code_elements, model_name="gpt-4", verbose=False):
     result_string = teller_of_tales(
         {"code": short_doc.page_content, "code_elements": code_elements}
     )
-    try:
-        result_json = json.loads(result_string["text"])
-    except JSONDecodeError:
-        try:
-            text = result_string["text"].replace("\\n", "\n")
-            start_index = text.find("{")
-            end_index = text.rfind("}")
-
-            if start_index != -1 and end_index != -1 and start_index < end_index:
-                json_text = text[start_index : end_index + 1]
-
-            json_text = _add_escape_characters(json_text)
-            result_json = json.loads(json_text)
-
-        except Exception as e:
-            print(
-                f"Error getting the JSON with the docstrings. \
-                Error: {e} \n Result: {result_string['text']}"
-            )
-            print("Returning empty JSON instead")
-            empty = {"classes": [], "methods": []}
-            return empty
-    return result_json
+    json_answer = convert_to_json(result_string)
+    if not json_answer:
+        print("Returning empty JSON due to a failure")
+        json_answer = {"classes": [], "methods": []}
+    return json_answer
 
 
 def is_hallucination(code_definition, code, expected_definitions):

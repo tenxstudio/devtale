@@ -16,7 +16,8 @@ from devtale.utils import (
     get_unit_tale,
     prepare_code_elements,
     redact_tale_information,
-    split,
+    split_code,
+    split_text,
 )
 
 DEFAULT_OUTPUT_PATH = "devtale_demo/"
@@ -34,14 +35,30 @@ def process_repository(
     fuse: bool = False,
 ) -> None:
     folders = {}
-    folder_tales = []
+    folder_tales = {
+        "repository_name": os.path.basename(os.path.abspath(root_path)),
+        "folders": [],
+    }
+
+    # get project structure before we modify it
+    gitignore_path = os.path.join(root_path, ".gitignore")
+    if os.path.exists(gitignore_path):
+        with open(gitignore_path, "r") as gitignore_file:
+            gitignore_patterns = [
+                line.strip() for line in gitignore_file if line.strip()
+            ]
+    else:
+        gitignore_patterns = None
+
+    project_tree = build_project_tree(root_path, gitignore_patterns=gitignore_patterns)
+    project_tree = ".\n" + project_tree
+
     for folder_path, _, filenames in os.walk(root_path):
         for filename in filenames:
             file_relative_path = os.path.relpath(
                 os.path.join(folder_path, filename), root_path
             )
             folder_name, file_name = os.path.split(file_relative_path)
-            # useful to keep a tree, we should use .gitignore to filter
             if folder_name not in folders:
                 folders[folder_name] = [file_name]
             else:
@@ -51,43 +68,37 @@ def process_repository(
         folder_path = os.path.join(root_path, folder_name)
         folder_tale = process_folder(folder_path, output_path, model_name, fuse)
         if folder_tale is not None:
-            is_root_folder = False
+            # add root folder summary information
             if folder_name == root_path or folder_name == "":
-                folder_name = os.path.basename(os.path.abspath(root_path))
-                is_root_folder = True
-            folder_tales.append(
-                {
-                    "folder_name": folder_name,
-                    "folder_summary": folder_tale,
-                    "is_root_folder": is_root_folder,
-                }
-            )
+                folder_tales["folders"].append(
+                    {
+                        "folder_name": os.path.basename(os.path.abspath(root_path)),
+                        "folder_summary": folder_tale,
+                        "is_root_folder": True,
+                    }
+                )
+            else:
+                folder_tales["folders"].append(
+                    {
+                        "folder_name": os.path.basename(folder_name),
+                        "folder_summary": folder_tale,
+                    }
+                )
 
     if folder_tales:
-        root_readme = redact_tale_information("root-level", folder_tales)
-
-        # get project structure
-        gitignore_path = os.path.join(root_path, ".gitignore")
-        if os.path.exists(gitignore_path):
-            with open(gitignore_path, "r") as gitignore_file:
-                gitignore_patterns = [
-                    line.strip() for line in gitignore_file if line.strip()
-                ]
-        else:
-            gitignore_patterns = None
-
-        project_tree = build_project_tree(
-            root_path, gitignore_patterns=gitignore_patterns
-        )
-        project_tree = ".\n" + project_tree
+        folder_summaries = split_text(str(folder_tales), chunk_size=15000)
+        root_readme = redact_tale_information(
+            "root-level", folder_summaries, model_name="gpt-3.5-turbo-16k"
+        )["text"]
 
         # inject project tree
         tree = f"\n\n## Project Tree\n```bash\n{project_tree}```\n\n"
         root_readme = root_readme + tree
 
-        save_path = os.path.join(output_path, os.path.basename(root_path))
-        logger.info(f"saving root index in {save_path}")
-        with open(os.path.join(save_path, "README.md"), "w", encoding="utf-8") as file:
+        logger.info(f"saving root index in {output_path}")
+        with open(
+            os.path.join(output_path, "README.md"), "w", encoding="utf-8"
+        ) as file:
             file.write(root_readme)
 
 
@@ -119,7 +130,13 @@ def process_folder(
                 )
 
     if tales:
-        folder_readme = redact_tale_information("folder-level", tales)
+        files_summaries = split_text(str(tales), chunk_size=15000)
+        folder_info = redact_tale_information(
+            "folder-level", files_summaries, model_name="gpt-3.5-turbo-16k"
+        )
+        folder_readme = folder_info["folder_readme"].replace("----------", "")
+        folder_tale = folder_info["folder_overview"]
+
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
@@ -127,7 +144,7 @@ def process_folder(
         with open(os.path.join(save_path, "README.md"), "w", encoding="utf-8") as file:
             file.write(folder_readme)
 
-        return folder_readme
+        return folder_tale
     return None
 
 
@@ -152,8 +169,8 @@ def process_file(
         return {"file_docstring": ""}
 
     logger.info("split dev draft ideas")
-    big_docs = split(code, language=LANGUAGES[file_ext], chunk_size=10000)
-    short_docs = split(code, language=LANGUAGES[file_ext], chunk_size=3000)
+    big_docs = split_code(code, language=LANGUAGES[file_ext], chunk_size=10000)
+    short_docs = split_code(code, language=LANGUAGES[file_ext], chunk_size=3000)
 
     logger.info("extract code elements")
     code_elements = []
@@ -188,7 +205,8 @@ def process_file(
     tale = fuse_tales(tales_list, code, code_elements_dict)
 
     logger.info("add dev tale summary")
-    tale["file_docstring"] = redact_tale_information("top-level", code_elements_dict)
+    summaries = split_text(str(code_elements_dict["summary"]), chunk_size=9000)
+    tale["file_docstring"] = redact_tale_information("top-level", summaries)["text"]
 
     save_path = os.path.join(output_path, f"{file_name}.json")
     logger.info(f"save dev tale in: {save_path}")
@@ -197,7 +215,7 @@ def process_file(
 
     if fuse:
         save_path = os.path.join(output_path, file_name)
-        logger.info(f"fuse dev tale in code file {save_path}")
+        logger.info(f"save fused dev tale in: {save_path}")
 
         if file_ext == ".py":
             aggregator = PythonAggregator()

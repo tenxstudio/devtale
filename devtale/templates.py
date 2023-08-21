@@ -41,15 +41,14 @@ Input: <<< {code} >>>
 
 
 FILE_LEVEL_TEMPLATE = """
-The provided summaries belong to the same code file and have been \
-processed by dividing the code into sections. Utilize these summaries \
-to create a comprehensive final summary that encapsulates the purpose \
-of the file.
+The following summaries enclosed within the <<< >>> delimeters are derived from the \
+same code file. Write a top-file level docstring that combines them into a concise  \
+final summary that effectively captures the overall purpose and functionality of the \
+entire code file.
 
-Summaries:
-----------
- {information}
-----------
+Summaries: <<< {information} >>>
+
+Ensure your final summary is no longer than three sentences.
 """
 
 
@@ -60,48 +59,63 @@ and the information below:
 Folder information: {information}
 
 Structure:
------------
+----------
 # <<<folder_name>>> (Always capitalize the initial letter)
 
 ## Overview
-This section provides an overview of the folder's purpose \
+(This section provides an overview of the folder's purpose \
 and objectives by understanding all the file summaries that \
-belong to the same folder.
+belong to the same folder.)
 
 ## Files
-Here is a list of files contained within this folder, accompanied \
-by concise one-line sentence description of their functionality:
+(Here is a list of files contained within this folder, accompanied \
+by concise one-line sentence description of their functionality)
 
-- ** <<<file_name>>> **: One-line sentence description of the file
-functionality.
+- ** <<<file_name>>> **: Concise one-line summary of the file's \
+operational purpose.
 
 [//]: # (Repeat the above section for each file_name in the list)
 
 For detailed insights into each file, refer to their respective \
 sections.
 If you have inquiries or need assistance, contact the contributors.
------------
+----------
 
 Ensure proper formatting and adhere to Markdown syntax guidelines.
+Output your answer as a JSON with the keys: folder_overview, folder_readme
 """
 
-
 ROOT_LEVEL_TEMPLATE = """
-Generate the root README content using the provided readme information \
-enclosed within the <<< >>> delimiters.
+Generate a markdown text using the enclosed \
+information within the <<< >>> delimiters as your context. \
+Your output must strictly follow the provided structure below \
+without adding any other section.
 
-1- Extract the project name from the root folder name for the title.
-2- Write a summary overview based on the READMEs from all the folders.
+This is the structure your output should have:
+Structure:
+----------
+# <<<repository_name>>> (Please ensure that the initial letter \
+is capitalized)
 
-Please ensure that the generated README adheres to Markdown syntax guidelines \
-and includes the following sections:
+## Description
+(Provide a concise one-line sentence that describes the primary \
+purpose of the code, utilizing all the contextual details \
+available.)
 
--Title (based on the root folder name)
--Description (one-line sentence of what the code does based on all the \
-information).
--Overview (overview based on folder summaries)
--Scripts (List of root CLI files with one-sentence description of \
-its purpose, if any, otherwise do not display this section).
+## Overview
+(In this section, your task is to create a single, well-structured \
+paragraph that concisely communicates the reasons behind the \
+repository's creation, its objectives, and the mechanics underlying \
+its functionality.)
 
-Here is readme information: <<< {information} >>>
+## Scripts
+(Enumerate the names of root CLI files. Include a one-line sentence \
+description for each file, detailing its intended purpose. If \
+there are no relevant files, omit this section entirely.
+----------
+
+Repository information: <<< {information} >>>
+
+Ensure proper formatting and adhere to Markdown syntax guidelines.
+Do not add sections that are not listed in the provided structure.
 """
