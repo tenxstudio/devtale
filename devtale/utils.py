@@ -25,9 +25,17 @@ TYPE_INFORMATION = {
 }
 
 
-def split(code, language, chunk_size=1000, chunk_overlap=0):
+def split_text(text, chunk_size=1000, chunk_overlap=0):
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=chunk_size, chunk_overlap=chunk_overlap
+    )
+    docs = text_splitter.create_documents([text])
+    return docs
+
+
+def split_code(code, language, chunk_size=1000, chunk_overlap=0):
     code_splitter = RecursiveCharacterTextSplitter.from_language(
-        language=language, chunk_size=chunk_size, chunk_overlap=0
+        language=language, chunk_size=chunk_size, chunk_overlap=chunk_overlap
     )
     docs = code_splitter.create_documents([code])
     return docs

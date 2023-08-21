@@ -16,7 +16,8 @@ from devtale.utils import (
     get_unit_tale,
     prepare_code_elements,
     redact_tale_information,
-    split,
+    split_code,
+    split_text,
 )
 
 DEFAULT_OUTPUT_PATH = "devtale_demo/"
@@ -150,8 +151,8 @@ def process_file(
         return {"file_docstring": ""}
 
     logger.info("split dev draft ideas")
-    big_docs = split(code, language=LANGUAGES[file_ext], chunk_size=10000)
-    short_docs = split(code, language=LANGUAGES[file_ext], chunk_size=3000)
+    big_docs = split_code(code, language=LANGUAGES[file_ext], chunk_size=10000)
+    short_docs = split_code(code, language=LANGUAGES[file_ext], chunk_size=3000)
 
     logger.info("extract code elements")
     code_elements = []
@@ -186,7 +187,10 @@ def process_file(
     tale = fuse_tales(tales_list, code, code_elements_dict)
 
     logger.info("add dev tale summary")
-    tale["file_docstring"] = redact_tale_information("top-level", code_elements_dict)
+    summaries = split_text(str(code_elements_dict["summary"]), chunk_size=9000)
+    tale["file_docstring"] = redact_tale_information(
+        "top-level", summaries[0].page_content
+    )
 
     if fuse:
         save_path = os.path.join(output_path, file_name)

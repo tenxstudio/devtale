@@ -41,10 +41,11 @@ Input: <<< {code} >>>
 
 
 FILE_LEVEL_TEMPLATE = """
-The provided summaries belong to the same code file and have been \
-processed by dividing the code into sections. Utilize these summaries \
-to create a comprehensive final summary that encapsulates the purpose \
-of the file.
+The provided summaries belong to the same code file and the summaries have been \
+processed by dividing the code file into sections, so each summary is for a section.
+That means that the summaries are complementary. \
+Utilize the provided summaries to create a comprehensive final summary that \
+encapsulates the purpose of the complete code file.
 
 Summaries:
 ----------
