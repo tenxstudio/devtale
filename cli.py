@@ -35,13 +35,26 @@ def process_repository(
 ) -> None:
     folders = {}
     folder_tales = []
+
+    # get project structure before we modify it
+    gitignore_path = os.path.join(root_path, ".gitignore")
+    if os.path.exists(gitignore_path):
+        with open(gitignore_path, "r") as gitignore_file:
+            gitignore_patterns = [
+                line.strip() for line in gitignore_file if line.strip()
+            ]
+    else:
+        gitignore_patterns = None
+
+    project_tree = build_project_tree(root_path, gitignore_patterns=gitignore_patterns)
+    project_tree = ".\n" + project_tree
+
     for folder_path, _, filenames in os.walk(root_path):
         for filename in filenames:
             file_relative_path = os.path.relpath(
                 os.path.join(folder_path, filename), root_path
             )
             folder_name, file_name = os.path.split(file_relative_path)
-            # useful to keep a tree, we should use .gitignore to filter
             if folder_name not in folders:
                 folders[folder_name] = [file_name]
             else:
@@ -65,21 +78,6 @@ def process_repository(
 
     if folder_tales:
         root_readme = redact_tale_information("root-level", folder_tales)
-
-        # get project structure
-        gitignore_path = os.path.join(root_path, ".gitignore")
-        if os.path.exists(gitignore_path):
-            with open(gitignore_path, "r") as gitignore_file:
-                gitignore_patterns = [
-                    line.strip() for line in gitignore_file if line.strip()
-                ]
-        else:
-            gitignore_patterns = None
-
-        project_tree = build_project_tree(
-            root_path, gitignore_patterns=gitignore_patterns
-        )
-        project_tree = ".\n" + project_tree
 
         # inject project tree
         tree = f"\n\n## Project Tree\n```bash\n{project_tree}```\n\n"
