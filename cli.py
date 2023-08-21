@@ -66,7 +66,14 @@ def process_repository(
 
     for folder_name in folders.keys():
         folder_path = os.path.join(root_path, folder_name)
-        folder_tale = process_folder(folder_path, output_path, model_name, fuse)
+        try:
+            folder_tale = process_folder(folder_path, output_path, model_name, fuse)
+        except Exception as e:
+            logger.info(
+                f"Failed to create folder-level tale for {folder_path} - Exception: {e}"
+            )
+            folder_tale = None
+
         if folder_tale is not None:
             # add root folder summary information
             if folder_name == root_path or folder_name == "":
@@ -119,15 +126,23 @@ def process_folder(
             and os.path.splitext(filename)[1] in ALLOWED_EXTENSIONS
         ):
             logger.info(f"processing {file_path}")
-            file_tale = process_file(file_path, save_path, model_name, fuse)
-            if file_tale["file_docstring"]:
-                tales.append(
-                    {
-                        "folder_name": folder_path,
-                        "file_name": filename,
-                        "file_summary": file_tale["file_docstring"],
-                    }
+            try:
+                file_tale = process_file(file_path, save_path, model_name, fuse)
+            except Exception as e:
+                logger.info(
+                    f"Failed to create dev tale for {file_path} - Exception: {e}"
                 )
+                file_tale = None
+
+            if file_tale is not None:
+                if file_tale["file_docstring"]:
+                    tales.append(
+                        {
+                            "folder_name": folder_path,
+                            "file_name": filename,
+                            "file_summary": file_tale["file_docstring"],
+                        }
+                    )
 
     if tales:
         files_summaries = split_text(str(tales), chunk_size=15000)
