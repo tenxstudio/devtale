@@ -172,29 +172,38 @@ def is_hallucination(code_definition, code, expected_definitions):
 
 def fuse_tales(tales_list, code, code_elements_dict):
     fused_tale = {"classes": [], "methods": []}
+    errors = []
     unique_methods = set()
     unique_classes = set()
 
     for tale in tales_list:
         if "classes" in tale:
             for class_info in tale["classes"]:
-                class_name = class_info["class_name"]
-                if class_name not in unique_classes and not is_hallucination(
-                    class_name, code, code_elements_dict["classes"]
-                ):
-                    unique_classes.add(class_name)
-                    fused_tale["classes"].append(class_info)
+                if isinstance(class_info, dict):
+                    class_name = class_info["class_name"]
+                    if class_name not in unique_classes and not is_hallucination(
+                        class_name, code, code_elements_dict["classes"]
+                    ):
+                        unique_classes.add(class_name)
+                        fused_tale["classes"].append(class_info)
+                else:
+                    if tale not in errors:
+                        errors.append(tale)
 
         if "methods" in tale:
-            for method in tale["methods"]:
-                method_name = method["method_name"]
-                if method_name not in unique_methods and not is_hallucination(
-                    method_name, code, code_elements_dict["methods"]
-                ):
-                    unique_methods.add(method_name)
-                    fused_tale["methods"].append(method)
+            for method_info in tale["methods"]:
+                if isinstance(method_info, dict):
+                    method_name = method_info["method_name"]
+                    if method_name not in unique_methods and not is_hallucination(
+                        method_name, code, code_elements_dict["methods"]
+                    ):
+                        unique_methods.add(method_name)
+                        fused_tale["methods"].append(method_info)
+                else:
+                    if tale not in errors:
+                        errors.append(tale)
 
-    return fused_tale
+    return fused_tale, errors
 
 
 def _add_escape_characters(invalid_json):
