@@ -78,7 +78,10 @@ def process_repository(
             )
 
     if folder_tales:
-        root_readme = redact_tale_information("root-level", folder_tales)["text"]
+        folder_summaries = split_text(str(folder_tales), chunk_size=15000)
+        root_readme = redact_tale_information(
+            "root-level", folder_summaries, model_name="gpt-3.5-turbo-16k"
+        )["text"]
 
         # inject project tree
         tree = f"\n\n## Project Tree\n```bash\n{project_tree}```\n\n"
@@ -119,17 +122,20 @@ def process_folder(
 
     if tales:
         files_summaries = split_text(str(tales), chunk_size=15000)
-        folder_readme = redact_tale_information(
+        folder_info = redact_tale_information(
             "folder-level", files_summaries, model_name="gpt-3.5-turbo-16k"
         )
+        folder_readme = folder_info["folder_readme"].replace("----------", "")
+        folder_tale = folder_info["folder_overview"]
+
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
         logger.info(f"saving index in {save_path}")
         with open(os.path.join(save_path, "README.md"), "w", encoding="utf-8") as file:
-            file.write(folder_readme["folder_readme"].replace("----------", ""))
+            file.write(folder_readme)
 
-        return folder_readme
+        return folder_tale
     return None
 
 
