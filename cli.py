@@ -188,14 +188,9 @@ def process_file(
     logger.info("add dev tale summary")
     tale["file_docstring"] = redact_tale_information("top-level", code_elements_dict)
 
-    save_path = os.path.join(output_path, f"{file_name}.json")
-    logger.info(f"save dev tale in: {save_path}")
-    with open(save_path, "w") as json_file:
-        json.dump(tale, json_file, indent=2)
-
     if fuse:
         save_path = os.path.join(output_path, file_name)
-        logger.info(f"fuse dev tale in code file {save_path}")
+        logger.info(f"save fused dev tale in code file {save_path}")
 
         if file_ext == ".py":
             aggregator = PythonAggregator()
@@ -205,6 +200,11 @@ def process_file(
         fused_tale = aggregator.document(code=code, documentation=tale)
         with open(save_path, "w") as file:
             file.write(fused_tale)
+    else:
+        save_path = os.path.join(output_path, f"{file_name}.json")
+        logger.info(f"save dev tale in: {save_path}")
+        with open(save_path, "w") as json_file:
+            json.dump(tale, json_file, indent=2)
 
     return tale
 
