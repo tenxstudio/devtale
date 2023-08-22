@@ -1,0 +1,60 @@
+name: "Document"
+description: "Automatically document a repository, folder, or file."
+
+inputs:
+  openai_api_key:
+    description: "Your OpenAI API key"
+    required: true
+  path:
+    description: "Path to your repository, folder, or file."
+    required: true
+  recursive:
+    description: "True if you want to document the full repository. Otherwise False"
+    required: false
+    default: false
+  target_branch:
+    description: "Branch name for the documentation pull request."
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v3
+      with:
+        python-version: "3.11"
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+      shell: bash
+
+    - name: Document
+      run: |
+        if ${{ inputs.recursive }}; then
+          echo "Documenting repository"
+          python ${{ github.action_path }}/cli.py -r -p ${{ inputs.path }} -o ${{ inputs.path }} -f
+        else
+          echo "Documenting folder/path"
+          python ${{ github.action_path }}/cli.py -p ${{ inputs.path }} -o ${{ inputs.path }} -f
+        fi
+      env:
+        OPENAI_API_KEY: ${{ inputs.openai_api_key }}
+      shell: bash
+
+    - name: Clean Documentation Files
+      run: |
+        rm -f *.py.json
+        rm -f *.php.json
+      shell: bash
+
+    - name: Push PR
+      uses: peter-evans/create-pull-request@v5
+      with:
+        commit-message: add docstrings
+        title: "[devtale] Add documentation"
+        body: This PR incorporates automatically generated documentation into previously undocumented code files.
+        branch: devtale/documentation
+        base: ${{ inputs.target_branch }}
+        delete-branch: true
