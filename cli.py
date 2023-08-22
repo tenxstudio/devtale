@@ -97,6 +97,7 @@ def process_repository(
         root_readme = redact_tale_information(
             "root-level", folder_summaries, model_name="gpt-3.5-turbo-16k"
         )["text"]
+        root_readme = root_readme.replace("----------", "")
 
         # inject project tree
         tree = f"\n\n## Project Tree\n```bash\n{project_tree}```\n\n"
