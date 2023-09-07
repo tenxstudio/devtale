@@ -39,6 +39,15 @@ use escaped newlines.
 Input: <<< {code} >>>
 """
 
+UNKNOWN_FILE_LEVEL_TEMPLATE = """
+Using the following code enclosed within the <<< >>> delimeters write a top-file level \
+docstring for a concise summary that effectively captures the overall purpose and \
+functionality of the code.
+
+code: <<< {information} >>>
+
+Ensure your final summary is no longer than three sentences.
+"""
 
 FILE_LEVEL_TEMPLATE = """
 The following summaries enclosed within the <<< >>> delimeters are derived from the \

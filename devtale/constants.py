@@ -1,7 +1,7 @@
 from langchain.text_splitter import Language
 
 # we are only documenting the file that ends with the following extensions:
-ALLOWED_EXTENSIONS = [".php", ".py"]
+ALLOWED_EXTENSIONS = [".php", ".py", ""]
 
 # split code files according the programming language
 LANGUAGES = {
