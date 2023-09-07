@@ -50,33 +50,26 @@ def process_repository(
     else:
         gitignore_patterns = None
 
-    project_tree = build_project_tree(root_path, gitignore_patterns=gitignore_patterns)
+    project_tree, file_paths = build_project_tree(
+        root_path, gitignore_patterns=gitignore_patterns
+    )
     project_tree = ".\n" + project_tree
 
-    for folder_path, _, filenames in os.walk(root_path):
-        for filename in filenames:
-            file_relative_path = os.path.relpath(
-                os.path.join(folder_path, filename), root_path
-            )
-            folder_name, file_name = os.path.split(file_relative_path)
-            if folder_name not in folders:
-                folders[folder_name] = [file_name]
-            else:
-                folders[folder_name].append(file_name)
+    folders = list(set([os.path.dirname(file_path) for file_path in file_paths]))
 
-    for folder_name in folders.keys():
-        folder_path = os.path.join(root_path, folder_name)
+    for folder_path in folders:
         try:
             folder_tale = process_folder(folder_path, output_path, model_name, fuse)
         except Exception as e:
+            folder_name = os.path.basename(folder_path)
             logger.info(
-                f"Failed to create folder-level tale for {folder_path} - Exception: {e}"
+                f"Failed to create folder-level tale for {folder_name} - Exception: {e}"
             )
             folder_tale = None
 
         if folder_tale is not None:
             # add root folder summary information
-            if folder_name == root_path or folder_name == "":
+            if folder_path == root_path:
                 folder_tales["folders"].append(
                     {
                         "folder_name": os.path.basename(os.path.abspath(root_path)),
@@ -87,7 +80,7 @@ def process_repository(
             else:
                 folder_tales["folders"].append(
                     {
-                        "folder_name": os.path.basename(folder_name),
+                        "folder_name": os.path.basename(folder_path),
                         "folder_summary": folder_tale,
                     }
                 )
@@ -102,6 +95,10 @@ def process_repository(
         # inject project tree
         tree = f"\n\n## Project Tree\n```bash\n{project_tree}```\n\n"
         root_readme = root_readme + tree
+
+        logger.info("save root json..")
+        with open(os.path.join(output_path, "root_level.json"), "w") as json_file:
+            json.dump(folder_tales, json_file, indent=2)
 
         logger.info(f"saving root index in {output_path}")
         with open(
@@ -156,6 +153,10 @@ def process_folder(
         if not os.path.exists(save_path):
             os.makedirs(save_path)
 
+        logger.info("save folder json..")
+        with open(os.path.join(save_path, "folder_level.json"), "w") as json_file:
+            json.dump(tales, json_file, indent=2)
+
         logger.info(f"saving index in {save_path}")
         with open(os.path.join(save_path, "README.md"), "w", encoding="utf-8") as file:
             file.write(folder_readme)
@@ -176,13 +177,16 @@ def process_file(
     logger.info("read dev draft")
     file_name = os.path.basename(file_path)
     file_ext = os.path.splitext(file_name)[-1]
-    logger.info(f"extension: {file_ext}")
 
     with open(file_path, "r") as file:
         code = file.read()
 
     if not code:
         return {"file_docstring": ""}
+
+    if not file_ext:
+        bash_docstring = redact_tale_information("unknow-top-level", code)["text"]
+        return {"file_docstring": bash_docstring}
 
     logger.info("split dev draft ideas")
     big_docs = split_code(code, language=LANGUAGES[file_ext], chunk_size=10000)
