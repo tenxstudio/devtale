@@ -71,10 +71,10 @@ def process_repository(
 
         if folder_tale is not None:
             # add root folder summary information
-            if folder_path == root_path or folder_path == "":
-                logger.info(
-                    f"DEBUG: folder_path == root_path {folder_path} - {root_path}"
-                )
+            if (
+                os.path.basename(folder_path) == os.path.basename(root_path)
+                or folder_path == ""
+            ):
                 folder_tales["folders"].append(
                     {
                         "folder_name": os.path.basename(os.path.abspath(root_path)),
