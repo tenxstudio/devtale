@@ -60,47 +60,44 @@ Summaries: <<< {information} >>>
 Ensure your final summary is no longer than three sentences.
 """
 
-
 FOLDER_LEVEL_TEMPLATE = """
-Create a clear and concise README by utilizing the provided structure \
-and the information below:
+Generate a markdown text using the enclosed \
+information within the <<< >>> delimiters as your context. \
+Your output must strictly adhere to the provided structure below \
+without adding any other section more than the folder name on it.
 
-Folder information: {information}
-
+This is the structure your markdown text must have:
 Structure:
 ----------
-# <<<folder_name>>> (Always capitalize the initial letter)
+#### <<<folder_name>>>
 
-## Overview
-(This section provides an overview of the folder's purpose \
-and objectives by understanding all the file summaries that \
-belong to the same folder.)
+<<<folder_overview>>> (Paragraph that concisely communicates the \
+folder's purpose.
 
-## Files
-(Here is a list of files contained within this folder, accompanied \
-by concise one-line sentence description of their functionality)
-
-- ** <<<file_name>>> **: Concise one-line summary of the file's \
-operational purpose.
-
-[//]: # (Repeat the above section for each file_name in the list)
-
-For detailed insights into each file, refer to their respective \
-sections.
-If you have inquiries or need assistance, contact the contributors.
+- *<<<file_name>>>*: <<<file_description>>> (Your task it to
+write a short description of what the file does.)
 ----------
 
-Ensure proper formatting and adhere to Markdown syntax guidelines.
-Output your answer as a JSON with the keys: folder_overview, folder_readme
+Folder information: <<< {information} >>>
+
+Ensure proper formatting and adhere to Markdown syntax guidelines, \
+and always use escaped newlines.
+Do not add sections that are not listed in the provided structure.
+
+Output your answer as a JSON with the keys: folder_overview and folder_readme.
+
+folder_readme is the markdown text, and folder_overview is a brief description \
+of the folder context.
 """
+
 
 ROOT_LEVEL_TEMPLATE = """
 Generate a markdown text using the enclosed \
 information within the <<< >>> delimiters as your context. \
-Your output must strictly follow the provided structure below \
-without adding any other section.
+Your output must strictly adhere to the provided structure below \
+without adding any other section not mentioned on it.
 
-This is the structure your output should have:
+This is the structure your output must have:
 Structure:
 ----------
 # <<<repository_name>>> (Please ensure that the initial letter \
@@ -116,11 +113,6 @@ available.)
 paragraph that concisely communicates the reasons behind the \
 repository's creation, its objectives, and the mechanics underlying \
 its functionality.)
-
-## Scripts
-(Enumerate the names of root CLI files. Include a one-line sentence \
-description for each file, detailing its intended purpose. If \
-there are no relevant files, omit this section entirely.
 ----------
 
 Repository information: <<< {information} >>>

@@ -34,7 +34,6 @@ def process_repository(
     model_name: str = DEFAULT_MODEL_NAME,
     fuse: bool = False,
 ) -> None:
-    folders = {}
     folder_tales = {
         "repository_name": os.path.basename(os.path.abspath(root_path)),
         "folders": [],
@@ -56,12 +55,15 @@ def process_repository(
     project_tree = ".\n" + project_tree
 
     folders = list(set([os.path.dirname(file_path) for file_path in file_paths]))
+    folders_readmes = []
 
     for folder_path in folders:
         try:
             if folder_path == root_path:
                 folder_path += "/"
-            folder_tale = process_folder(folder_path, output_path, model_name, fuse)
+            folder_readme, folder_tale = process_folder(
+                folder_path, output_path, model_name, fuse
+            )
         except Exception as e:
             folder_name = os.path.basename(folder_path)
             logger.info(
@@ -72,17 +74,18 @@ def process_repository(
         if folder_tale is not None:
             # add root folder summary information
             if (
-                os.path.basename(folder_path) == os.path.basename(root_path)
-                or folder_path == ""
+                os.path.basename(folder_path) == os.path.basename(root_path + "/")
+                or os.path.basename(folder_path) == ""
             ):
                 folder_tales["folders"].append(
                     {
                         "folder_name": os.path.basename(os.path.abspath(root_path)),
                         "folder_summary": folder_tale,
-                        "is_root_folder": True,
+                        "is_the_root_folder": True,
                     }
                 )
             else:
+                folders_readmes.append(folder_readme)
                 folder_tales["folders"].append(
                     {
                         "folder_name": os.path.basename(folder_path),
@@ -96,6 +99,11 @@ def process_repository(
             "root-level", folder_summaries, model_name="gpt-3.5-turbo-16k"
         )["text"]
         root_readme = root_readme.replace("----------", "")
+
+        # inject folders information
+        if folders_readmes:
+            folders_information = "\n\n## Folders\n\n" + "".join(folders_readmes)
+            root_readme = root_readme + folders_information
 
         # inject project tree
         tree = f"\n\n## Project Tree\n```bash\n{project_tree}```\n\n"
@@ -121,12 +129,12 @@ def process_folder(
     save_path = os.path.join(output_path, os.path.basename(folder_path))
     tales = []
 
-    for filename in os.listdir(folder_path):
-        file_path = os.path.join(folder_path, filename)
+    for file_name in os.listdir(folder_path):
+        file_path = os.path.join(folder_path, file_name)
 
         if (
             os.path.isfile(file_path)
-            and os.path.splitext(filename)[1] in ALLOWED_EXTENSIONS
+            and os.path.splitext(file_name)[1] in ALLOWED_EXTENSIONS
         ):
             logger.info(f"processing {file_path}")
             try:
@@ -139,24 +147,33 @@ def process_folder(
 
             if file_tale is not None:
                 if file_tale["file_docstring"]:
-                    tales.append(
+                    folder_name = os.path.basename(os.path.abspath(folder_path))
+                    folder_entry = next(
+                        (item for item in tales if item["folder_name"] == folder_name),
+                        None,
+                    )
+                    if folder_entry is None:
+                        folder_entry = {
+                            "folder_name": folder_name,
+                            "folder_files": [],
+                        }
+                        tales.append(folder_entry)
+
+                    folder_entry["folder_files"].append(
                         {
-                            "folder_name": folder_path,
-                            "file_name": filename,
-                            "file_summary": file_tale["file_docstring"],
+                            "file_name": file_name,
+                            "file_description": file_tale["file_docstring"],
                         }
                     )
 
     if tales:
-        files_summaries = split_text(str(tales), chunk_size=15000)
+        files_summaries = split_text(str(tales), chunk_size=10000)
         folder_info = redact_tale_information(
             "folder-level", files_summaries, model_name="gpt-3.5-turbo-16k"
         )
+
         folder_readme = folder_info["folder_readme"].replace("----------", "")
         folder_tale = folder_info["folder_overview"]
-
-        if not os.path.exists(save_path):
-            os.makedirs(save_path)
 
         logger.info("save folder json..")
         with open(os.path.join(save_path, "folder_level.json"), "w") as json_file:
@@ -166,7 +183,7 @@ def process_folder(
         with open(os.path.join(save_path, "README.md"), "w", encoding="utf-8") as file:
             file.write(folder_readme)
 
-        return folder_tale
+        return folder_readme, folder_tale
     return None
 
 
@@ -179,15 +196,24 @@ def process_file(
     if not os.path.exists(output_path):
         os.makedirs(output_path)
 
-    logger.info("read dev draft")
     file_name = os.path.basename(file_path)
     file_ext = os.path.splitext(file_name)[-1]
+    save_path = os.path.join(output_path, f"{file_name}.json")
 
+    logger.info("read dev draft")
     with open(file_path, "r") as file:
         code = file.read()
 
     if not code:
         return {"file_docstring": ""}
+
+    if os.path.exists(save_path):
+        logger.info(f"Skipping {file_name} as its tale file already exists.")
+        with open(save_path, "r") as file:
+            found_tale = json.load(file)
+        if fuse:
+            fuse_documentation(code, found_tale, output_path, file_name, file_ext)
+        return found_tale
 
     if not file_ext:
         bash_docstring = redact_tale_information("unknow-top-level", code)["text"]
@@ -239,27 +265,30 @@ def process_file(
     summaries = split_text(str(code_elements_dict["summary"]), chunk_size=9000)
     tale["file_docstring"] = redact_tale_information("top-level", summaries)["text"]
 
-    save_path = os.path.join(output_path, f"{file_name}.json")
     logger.info(f"save dev tale in: {save_path}")
     with open(save_path, "w") as json_file:
         json.dump(tale, json_file, indent=2)
 
     if fuse:
-        save_path = os.path.join(output_path, file_name)
-        logger.info(f"save fused dev tale in: {save_path}")
-
-        if file_ext == ".py":
-            aggregator = PythonAggregator()
-        elif file_ext == ".php":
-            aggregator = PHPAggregator()
-        elif file_ext == ".go":
-            aggregator = GoAggregator()
-
-        fused_tale = aggregator.document(code=code, documentation=tale)
-        with open(save_path, "w") as file:
-            file.write(fused_tale)
+        fuse_documentation(code, tale, output_path, file_name, file_ext)
 
     return tale
+
+
+def fuse_documentation(code, tale, output_path, file_name, file_ext):
+    save_path = os.path.join(output_path, file_name)
+    logger.info(f"save fused dev tale in: {save_path}")
+
+    if file_ext == ".py":
+        aggregator = PythonAggregator()
+    elif file_ext == ".php":
+        aggregator = PHPAggregator()
+    elif file_ext == ".go":
+        aggregator = GoAggregator()
+
+    fused_tale = aggregator.document(code=code, documentation=tale)
+    with open(save_path, "w") as file:
+        file.write(fused_tale)
 
 
 @click.command()

@@ -217,9 +217,9 @@ def _add_escape_characters(invalid_json):
 
     # Escape the unescaped control characters
     for char in unescaped_chars:
-        json_string = invalid_json.replace(char, "\\u{:04x}".format(ord(char)))
+        invalid_json = invalid_json.replace(char, "\\u{:04x}".format(ord(char)))
 
-    return json_string
+    return invalid_json
 
 
 def _should_ignore(path, gitignore_patterns):
