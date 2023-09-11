@@ -7,7 +7,7 @@ import os
 import click
 from dotenv import load_dotenv
 
-from devtale.aggregators import PHPAggregator, PythonAggregator
+from devtale.aggregators import GoAggregator, PHPAggregator, PythonAggregator
 from devtale.constants import ALLOWED_EXTENSIONS, LANGUAGES
 from devtale.utils import (
     build_project_tree,
@@ -59,6 +59,8 @@ def process_repository(
 
     for folder_path in folders:
         try:
+            if folder_path == root_path:
+                folder_path += "/"
             folder_tale = process_folder(folder_path, output_path, model_name, fuse)
         except Exception as e:
             folder_name = os.path.basename(folder_path)
@@ -69,7 +71,10 @@ def process_repository(
 
         if folder_tale is not None:
             # add root folder summary information
-            if folder_path == root_path:
+            if (
+                os.path.basename(folder_path) == os.path.basename(root_path)
+                or folder_path == ""
+            ):
                 folder_tales["folders"].append(
                     {
                         "folder_name": os.path.basename(os.path.abspath(root_path)),
@@ -247,6 +252,8 @@ def process_file(
             aggregator = PythonAggregator()
         elif file_ext == ".php":
             aggregator = PHPAggregator()
+        elif file_ext == ".go":
+            aggregator = GoAggregator()
 
         fused_tale = aggregator.document(code=code, documentation=tale)
         with open(save_path, "w") as file:
