@@ -7,7 +7,7 @@ import os
 import click
 from dotenv import load_dotenv
 
-from devtale.aggregators import PHPAggregator, PythonAggregator
+from devtale.aggregators import GoAggregator, PHPAggregator, PythonAggregator
 from devtale.constants import ALLOWED_EXTENSIONS, LANGUAGES
 from devtale.utils import (
     build_project_tree,
@@ -252,6 +252,8 @@ def process_file(
             aggregator = PythonAggregator()
         elif file_ext == ".php":
             aggregator = PHPAggregator()
+        elif file_ext == ".go":
+            aggregator = GoAggregator()
 
         fused_tale = aggregator.document(code=code, documentation=tale)
         with open(save_path, "w") as file:
