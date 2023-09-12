@@ -80,9 +80,18 @@ def process_repository(
                 folder_path += "/"
 
             folder_full_name = os.path.relpath(folder_path, root_path)
+
             folder_readme, folder_tale = process_folder(
-                folder_path, output_path, model_name, fuse, debug, folder_full_name
+                folder_path=folder_path,
+                output_path=os.path.join(output_path, folder_full_name)
+                if folder_full_name != "."
+                else output_path,
+                model_name=model_name,
+                fuse=fuse,
+                debug=debug,
+                folder_full_name=folder_full_name,
             )
+
         except Exception as e:
             folder_name = os.path.basename(folder_path)
             logger.info(
@@ -211,10 +220,11 @@ def process_folder(
 
     if debug:
         logger.debug(
-            f"""
-                FOLDER INFO:\nfolder_path: {folder_path}\n
-                output_path: {output_path}\n
-                save_path: {save_path}"""
+            f"""FOLDER INFO:
+        folder_path: {folder_path}
+        output_path: {output_path}
+        save_path: {save_path}
+        """
         )
         logger.debug(f"FILE_TALES: {tales}")
         return "", ""
