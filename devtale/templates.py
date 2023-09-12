@@ -82,6 +82,7 @@ Folder information: <<< {information} >>>
 
 Ensure proper formatting and adhere to Markdown syntax guidelines.
 Do not add sections that are not listed in the provided structure.
+Do not backticks around the list titles and headers.
 """
 
 
@@ -104,9 +105,9 @@ available.)
 
 ## Overview
 (In this section, your task is to create a single, well-structured \
-paragraph that concisely communicates the reasons behind the \
+five-lines paragraph that concisely communicates the reasons behind the \
 repository's creation, its objectives, and the mechanics underlying \
-its functionality. Maximum three lines.)
+its functionality.)
 ----------
 
 Repository information: <<< {information} >>>

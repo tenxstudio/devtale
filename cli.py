@@ -192,6 +192,10 @@ def process_folder(
                         folder_full_name = os.path.basename(
                             os.path.abspath(folder_path)
                         )
+
+                    if folder_full_name == ".":
+                        folder_full_name = "./"
+
                     folder_entry = next(
                         (
                             item
@@ -205,6 +209,14 @@ def process_folder(
                             "folder_name": folder_full_name,
                             "folder_files": [],
                         }
+                        if folder_full_name == ".":
+                            folder_entry[
+                                "folder_description"
+                            ] = """
+                            This is the root path of the repository. The top-level
+                            directory.
+                            """
+
                         tales.append(folder_entry)
 
                     folder_entry["folder_files"].append(
