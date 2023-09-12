@@ -64,23 +64,23 @@ FOLDER_LEVEL_TEMPLATE = """
 Generate a markdown text using the enclosed \
 information within the <<< >>> delimiters as your context. \
 Your output must strictly adhere to the provided structure below \
-without adding any other section more than the folder name on it.
+without adding any other section not mentioned on it.
 
-This is the structure your markdown text must have:
-Structure:
+This is the structure your output must have:
 ----------
 #### <<<folder_name>>>
+<<<folder_overview>>> (Provide a concise one-line sentence that describes the \
+primary purpose of the folder, utilizing all the contextual details available.)
 
-<<<folder_overview>>>
+**Files list:**
 
-- **<<<file_name>>>**: <<<file_description>>> (Your task it to
-write a short description of what the file does.)
+- **<<<file_name>>>**: <<<file_description>>> (short description of \
+what the file does.)
 ----------
 
 Folder information: <<< {information} >>>
 
-Ensure proper formatting and adhere to Markdown syntax guidelines, \
-and always use escaped newlines.
+Ensure proper formatting and adhere to Markdown syntax guidelines.
 Do not add sections that are not listed in the provided structure.
 """
 
@@ -106,7 +106,7 @@ available.)
 (In this section, your task is to create a single, well-structured \
 paragraph that concisely communicates the reasons behind the \
 repository's creation, its objectives, and the mechanics underlying \
-its functionality.)
+its functionality. Maximum three lines.)
 ----------
 
 Repository information: <<< {information} >>>

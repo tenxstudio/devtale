@@ -234,7 +234,7 @@ def process_folder(
         folder_readme = folder_readme.replace("----------", "")
 
         folder_overview = redact_tale_information(
-            "folder-description", folder_readme, model_name="text-davinci-003"
+            "folder-description", folder_readme, model_name="gpt-3.5-turbo-16k"
         )["text"]
 
         logger.info("save folder json..")
