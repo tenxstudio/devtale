@@ -61,8 +61,10 @@ def process_repository(
         try:
             if folder_path == root_path:
                 folder_path += "/"
+
+            folder_full_name = os.path.relpath(folder_path, root_path)
             folder_readme, folder_tale = process_folder(
-                folder_path, output_path, model_name, fuse
+                folder_path, output_path, model_name, fuse, folder_full_name
             )
         except Exception as e:
             folder_name = os.path.basename(folder_path)
@@ -125,6 +127,7 @@ def process_folder(
     output_path: str = DEFAULT_OUTPUT_PATH,
     model_name: str = DEFAULT_MODEL_NAME,
     fuse: bool = False,
+    folder_full_name: str = None,
 ) -> None:
     save_path = os.path.join(output_path, os.path.basename(folder_path))
     tales = []
@@ -147,14 +150,21 @@ def process_folder(
 
             if file_tale is not None:
                 if file_tale["file_docstring"]:
-                    folder_name = os.path.basename(os.path.abspath(folder_path))
+                    if not folder_full_name:
+                        folder_full_name = os.path.basename(
+                            os.path.abspath(folder_path)
+                        )
                     folder_entry = next(
-                        (item for item in tales if item["folder_name"] == folder_name),
+                        (
+                            item
+                            for item in tales
+                            if item["folder_name"] == folder_full_name
+                        ),
                         None,
                     )
                     if folder_entry is None:
                         folder_entry = {
-                            "folder_name": folder_name,
+                            "folder_name": folder_full_name,
                             "folder_files": [],
                         }
                         tales.append(folder_entry)
