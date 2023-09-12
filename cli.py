@@ -75,7 +75,6 @@ def process_repository(
     folders_readmes = []
     for folder_path in folders:
         try:
-            # if folder_path == root_path:
             if not folder_path.endswith("/"):
                 folder_path += "/"
 
