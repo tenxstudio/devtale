@@ -87,7 +87,7 @@ def process_repository(
                     }
                 )
             else:
-                folders_readmes.append(folder_readme)
+                folders_readmes.append("\n" + folder_readme)
                 folder_tales["folders"].append(
                     {
                         "folder_name": os.path.basename(folder_path),
@@ -104,7 +104,7 @@ def process_repository(
 
         # inject folders information
         if folders_readmes:
-            folders_information = "\n\n## Folders\n\n" + "".join(folders_readmes)
+            folders_information = "\n\n## Folders\n" + "".join(folders_readmes)
             root_readme = root_readme + folders_information
 
         # inject project tree
