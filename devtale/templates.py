@@ -74,7 +74,7 @@ Structure:
 <<<folder_overview>>> (Paragraph that concisely communicates the \
 folder's purpose.
 
-- *<<<file_name>>>*: <<<file_description>>> (Your task it to
+- **<<<file_name>>>**: <<<file_description>>> (Your task it to
 write a short description of what the file does.)
 ----------
 
