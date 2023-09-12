@@ -105,7 +105,7 @@ def redact_tale_information(
     if not content_type == "unknow-top-level":
         information = str(docs[0].page_content)
     else:
-        information = docs
+        information = str(docs)
 
     text_answer = teller_of_tales({"information": information})
 
@@ -122,6 +122,7 @@ def redact_tale_information(
 def convert_to_json(text_answer):
     try:
         result_json = json.loads(text_answer["text"])
+        return result_json
     except JSONDecodeError:
         try:
             text = text_answer["text"].replace("\\n", "\n")
@@ -133,6 +134,7 @@ def convert_to_json(text_answer):
 
             json_text = _add_escape_characters(json_text)
             result_json = json.loads(json_text)
+            return result_json
 
         except Exception as e:
             print(
@@ -140,7 +142,6 @@ def convert_to_json(text_answer):
                 Error: {e} \n Result: {text_answer['text']}"
             )
             return None
-    return result_json
 
 
 def get_unit_tale(short_doc, code_elements, model_name="gpt-4", verbose=False):

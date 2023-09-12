@@ -40,11 +40,11 @@ Input: <<< {code} >>>
 """
 
 UNKNOWN_FILE_LEVEL_TEMPLATE = """
-Using the following code enclosed within the <<< >>> delimeters write a top-file level \
-docstring for a concise summary that effectively captures the overall purpose and \
-functionality of the code.
+Using the following file data enclosed within the <<< >>> delimeters write a \
+top-file level concise summary that effectively captures the overall purpose and \
+functionality of the file.
 
-code: <<< {information} >>>
+file data: <<< {information} >>>
 
 Ensure your final summary is no longer than three sentences.
 """
@@ -71,8 +71,7 @@ Structure:
 ----------
 #### <<<folder_name>>>
 
-<<<folder_overview>>> (Paragraph that concisely communicates the \
-folder's purpose.
+<<<folder_overview>>>
 
 - **<<<file_name>>>**: <<<file_description>>> (Your task it to
 write a short description of what the file does.)

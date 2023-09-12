@@ -24,7 +24,7 @@ DEFAULT_OUTPUT_PATH = "devtale_demo/"
 DEFAULT_MODEL_NAME = "gpt-4"
 
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -281,8 +281,11 @@ def process_file(
         return found_tale
 
     if not file_ext:
-        bash_docstring = redact_tale_information("unknow-top-level", code)["text"]
-        return {"file_docstring": bash_docstring}
+        unknown_file_data = {"file_name": file_name, "file_content": code}
+        file_docstring = redact_tale_information("unknow-top-level", unknown_file_data)[
+            "text"
+        ]
+        return {"file_docstring": file_docstring}
 
     logger.info("split dev draft ideas")
     big_docs = split_code(code, language=LANGUAGES[file_ext], chunk_size=10000)
