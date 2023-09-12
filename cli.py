@@ -24,7 +24,7 @@ DEFAULT_OUTPUT_PATH = "devtale_demo/"
 DEFAULT_MODEL_NAME = "gpt-4"
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -33,6 +33,7 @@ def process_repository(
     output_path: str = DEFAULT_OUTPUT_PATH,
     model_name: str = DEFAULT_MODEL_NAME,
     fuse: bool = False,
+    debug: bool = False,
 ) -> None:
     folder_tales = {
         "repository_name": os.path.basename(os.path.abspath(root_path)),
@@ -80,7 +81,7 @@ def process_repository(
 
             folder_full_name = os.path.relpath(folder_path, root_path)
             folder_readme, folder_tale = process_folder(
-                folder_path, output_path, model_name, fuse, folder_full_name
+                folder_path, output_path, model_name, fuse, debug, folder_full_name
             )
         except Exception as e:
             folder_name = os.path.basename(folder_path)
@@ -110,6 +111,10 @@ def process_repository(
                         "folder_summary": folder_tale,
                     }
                 )
+
+    if debug:
+        logger.debug(f"FOLDER_TALES: {folder_tales}")
+        return None
 
     if folder_tales:
         folder_summaries = split_text(str(folder_tales), chunk_size=15000)
@@ -154,6 +159,7 @@ def process_folder(
     output_path: str = DEFAULT_OUTPUT_PATH,
     model_name: str = DEFAULT_MODEL_NAME,
     fuse: bool = False,
+    debug: bool = False,
     folder_full_name: str = None,
 ) -> None:
     save_path = os.path.join(output_path, os.path.basename(folder_path))
@@ -168,7 +174,7 @@ def process_folder(
         ):
             logger.info(f"processing {file_path}")
             try:
-                file_tale = process_file(file_path, save_path, model_name, fuse)
+                file_tale = process_file(file_path, save_path, model_name, fuse, debug)
             except Exception as e:
                 logger.info(
                     f"Failed to create dev tale for {file_path} - Exception: {e}"
@@ -203,6 +209,16 @@ def process_folder(
                         }
                     )
 
+    if debug:
+        logger.debug(
+            f"""
+                FOLDER INFO:\nfolder_path: {folder_path}\n
+                output_path: {output_path}\n
+                save_path: {save_path}"""
+        )
+        logger.debug(f"FILE_TALES: {tales}")
+        return "", ""
+
     if tales:
         files_summaries = split_text(str(tales), chunk_size=10000)
         folder_info = redact_tale_information(
@@ -229,13 +245,18 @@ def process_file(
     output_path: str = DEFAULT_OUTPUT_PATH,
     model_name: str = DEFAULT_MODEL_NAME,
     fuse: bool = False,
+    debug: bool = False,
 ) -> None:
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
-
     file_name = os.path.basename(file_path)
     file_ext = os.path.splitext(file_name)[-1]
     save_path = os.path.join(output_path, f"{file_name}.json")
+
+    if debug:
+        logger.debug(f"FILE INFO:\nfile_path: {file_path}\nsave_path: {save_path}")
+        return {"file_docstring": "Testing file docstring"}
+
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
 
     logger.info("read dev draft")
     with open(file_path, "r") as file:
@@ -369,12 +390,20 @@ def fuse_documentation(code, tale, output_path, file_name, file_ext):
     help="The OpenAI model name you want to use. \
     https://platform.openai.com/docs/models",
 )
+@click.option(
+    "--debug",
+    "debug",
+    is_flag=True,
+    default=False,
+    help="Mock answer and avoid GPT calls",
+)
 def main(
     path: str,
     recursive: bool,
     fuse: bool,
     output_path: str = DEFAULT_OUTPUT_PATH,
     model_name: str = DEFAULT_MODEL_NAME,
+    debug: bool = False,
 ):
     load_dotenv()
 
@@ -386,13 +415,31 @@ def main(
     if os.path.isdir(path):
         if recursive:
             logger.info("Processing repository")
-            process_repository(path, output_path, model_name, fuse)
+            process_repository(
+                root_path=path,
+                output_path=output_path,
+                model_name=model_name,
+                fuse=fuse,
+                debug=debug,
+            )
         else:
             logger.info("Processing folder")
-            process_folder(path, output_path, model_name, fuse)
+            process_folder(
+                folder_path=path,
+                output_path=output_path,
+                model_name=model_name,
+                fuse=fuse,
+                debug=debug,
+            )
     elif os.path.isfile(path):
         logger.info("Processing file")
-        process_file(path, output_path, model_name, fuse)
+        process_file(
+            file_path=path,
+            output_path=output_path,
+            model_name=model_name,
+            fuse=fuse,
+            debug=debug,
+        )
     else:
         raise f"Invalid input path {path}. Path must be a directory or code file."
 
