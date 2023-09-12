@@ -38,7 +38,6 @@ def process_repository(
         "repository_name": os.path.basename(os.path.abspath(root_path)),
         "folders": [],
     }
-
     # get project structure before we modify it
     gitignore_path = os.path.join(root_path, ".gitignore")
     if os.path.exists(gitignore_path):
@@ -55,11 +54,13 @@ def process_repository(
     project_tree = ".\n" + project_tree
 
     folders = list(set([os.path.dirname(file_path) for file_path in file_paths]))
-    folders_readmes = []
+    folders = sorted(folders, key=lambda path: path.count("/"))
 
+    folders_readmes = []
     for folder_path in folders:
         try:
-            if folder_path == root_path:
+            # if folder_path == root_path:
+            if not folder_path.endswith("/"):
                 folder_path += "/"
 
             folder_full_name = os.path.relpath(folder_path, root_path)
@@ -74,6 +75,7 @@ def process_repository(
             folder_tale = None
 
         if folder_tale is not None:
+            folders_readmes.append("\n\n" + folder_readme)
             # add root folder summary information
             if (
                 os.path.basename(folder_path) == os.path.basename(root_path + "/")
@@ -87,7 +89,6 @@ def process_repository(
                     }
                 )
             else:
-                folders_readmes.append("\n" + folder_readme)
                 folder_tales["folders"].append(
                     {
                         "folder_name": os.path.basename(folder_path),
@@ -104,7 +105,7 @@ def process_repository(
 
         # inject folders information
         if folders_readmes:
-            folders_information = "\n\n## Folders\n" + "".join(folders_readmes)
+            folders_information = "\n\n## Folders" + "".join(folders_readmes)
             root_readme = root_readme + folders_information
 
         # inject project tree
