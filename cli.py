@@ -38,6 +38,21 @@ def process_repository(
         "repository_name": os.path.basename(os.path.abspath(root_path)),
         "folders": [],
     }
+
+    # get original readme before creating a new one
+    original_readme_content = None
+    for file_name in ["readme.md", "README.md"]:
+        readme_path = os.path.join(root_path, file_name)
+        if os.path.exists(readme_path):
+            with open(readme_path, "r") as file:
+                original_readme_content = file.readlines()
+            if root_path == output_path:
+                try:
+                    os.rename(readme_path, os.path.join(root_path, "old_readme.md"))
+                except OSError as e:
+                    logger.info(f"Error keeping the original readme file: {e}")
+            break
+
     # get project structure before we modify it
     gitignore_path = os.path.join(root_path, ".gitignore")
     if os.path.exists(gitignore_path):
@@ -111,6 +126,17 @@ def process_repository(
         # inject project tree
         tree = f"\n\n## Project Tree\n```bash\n{project_tree}```\n\n"
         root_readme = root_readme + tree
+
+        # inject original readme if there is one
+        if original_readme_content:
+            filtered_original_readme = [
+                line for line in original_readme_content if not line.startswith("# ")
+            ]
+            modified_original_readme = "\n\n## Extra notes\n\n" + "".join(
+                filtered_original_readme
+            )
+
+            root_readme = root_readme + modified_original_readme
 
         logger.info("save root json..")
         with open(os.path.join(output_path, "root_level.json"), "w") as json_file:
