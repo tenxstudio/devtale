@@ -99,13 +99,10 @@ def process_repository(
             )
             folder_tale = None
 
-        if folder_tale is not None:
+        if folder_tale:
             folders_readmes.append("\n\n" + folder_readme)
             # add root folder summary information
-            if (
-                os.path.basename(folder_path) == os.path.basename(root_path + "/")
-                or os.path.basename(folder_path) == ""
-            ):
+            if folder_path == folders[0]:
                 folder_tales["folders"].append(
                     {
                         "folder_name": os.path.basename(os.path.abspath(root_path)),
@@ -116,7 +113,7 @@ def process_repository(
             else:
                 folder_tales["folders"].append(
                     {
-                        "folder_name": os.path.basename(folder_path),
+                        "folder_name": folder_full_name,
                         "folder_summary": folder_tale,
                     }
                 )
@@ -227,7 +224,7 @@ def process_folder(
         """
         )
         logger.debug(f"FILE_TALES: {tales}")
-        return "", ""
+        return "-", "-"
 
     if tales:
         files_summaries = split_text(str(tales), chunk_size=10000)
@@ -263,7 +260,7 @@ def process_file(
 
     if debug:
         logger.debug(f"FILE INFO:\nfile_path: {file_path}\nsave_path: {save_path}")
-        return {"file_docstring": "Testing file docstring"}
+        return {"file_docstring": "-"}
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)
