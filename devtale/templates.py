@@ -40,11 +40,11 @@ Input: <<< {code} >>>
 """
 
 UNKNOWN_FILE_LEVEL_TEMPLATE = """
-Using the following code enclosed within the <<< >>> delimeters write a top-file level \
-docstring for a concise summary that effectively captures the overall purpose and \
-functionality of the code.
+Using the following file data enclosed within the <<< >>> delimeters write a \
+top-file level concise summary that effectively captures the overall purpose and \
+functionality of the file.
 
-code: <<< {information} >>>
+file data: <<< {information} >>>
 
 Ensure your final summary is no longer than three sentences.
 """
@@ -64,30 +64,25 @@ FOLDER_LEVEL_TEMPLATE = """
 Generate a markdown text using the enclosed \
 information within the <<< >>> delimiters as your context. \
 Your output must strictly adhere to the provided structure below \
-without adding any other section more than the folder name on it.
+without adding any other section not mentioned on it.
 
-This is the structure your markdown text must have:
-Structure:
+This is the structure your output must have:
 ----------
 #### <<<folder_name>>>
+<<<folder_overview>>> (Provide a concise one-line sentence that describes the \
+primary purpose of the folder, utilizing all the contextual details available.)
 
-<<<folder_overview>>> (Paragraph that concisely communicates the \
-folder's purpose.
+**Files list:**
 
-- *<<<file_name>>>*: <<<file_description>>> (Your task it to
-write a short description of what the file does.)
+- **<<<file_name>>>**: <<<file_description>>> (short description of \
+what the file does.)
 ----------
 
 Folder information: <<< {information} >>>
 
-Ensure proper formatting and adhere to Markdown syntax guidelines, \
-and always use escaped newlines.
+Ensure proper formatting and adhere to Markdown syntax guidelines.
 Do not add sections that are not listed in the provided structure.
-
-Output your answer as a JSON with the keys: folder_overview and folder_readme.
-
-folder_readme is the markdown text, and folder_overview is a brief description \
-of the folder context.
+Do not backticks around the list titles and headers.
 """
 
 
@@ -110,7 +105,7 @@ available.)
 
 ## Overview
 (In this section, your task is to create a single, well-structured \
-paragraph that concisely communicates the reasons behind the \
+five-lines paragraph that concisely communicates the reasons behind the \
 repository's creation, its objectives, and the mechanics underlying \
 its functionality.)
 ----------
@@ -119,4 +114,11 @@ Repository information: <<< {information} >>>
 
 Ensure proper formatting and adhere to Markdown syntax guidelines.
 Do not add sections that are not listed in the provided structure.
+"""
+
+FOLDER_SHORT_DESCRIPTION_TEMPLATE = """
+Generate a one-line description of the folder's purpose based on \
+its following readme enclosed within the <<< >>> delimiters
+
+README: <<< {information} >>>
 """

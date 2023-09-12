@@ -33,11 +33,26 @@ def process_repository(
     output_path: str = DEFAULT_OUTPUT_PATH,
     model_name: str = DEFAULT_MODEL_NAME,
     fuse: bool = False,
+    debug: bool = False,
 ) -> None:
     folder_tales = {
         "repository_name": os.path.basename(os.path.abspath(root_path)),
         "folders": [],
     }
+
+    # get original readme before creating a new one
+    original_readme_content = None
+    for file_name in ["readme.md", "README.md"]:
+        readme_path = os.path.join(root_path, file_name)
+        if os.path.exists(readme_path):
+            with open(readme_path, "r") as file:
+                original_readme_content = file.readlines()
+            if root_path == output_path:
+                try:
+                    os.rename(readme_path, os.path.join(root_path, "old_readme.md"))
+                except OSError as e:
+                    logger.info(f"Error keeping the original readme file: {e}")
+            break
 
     # get project structure before we modify it
     gitignore_path = os.path.join(root_path, ".gitignore")
@@ -55,15 +70,27 @@ def process_repository(
     project_tree = ".\n" + project_tree
 
     folders = list(set([os.path.dirname(file_path) for file_path in file_paths]))
-    folders_readmes = []
+    folders = sorted(folders, key=lambda path: path.count("/"))
 
+    folders_readmes = []
     for folder_path in folders:
         try:
-            if folder_path == root_path:
+            if not folder_path.endswith("/"):
                 folder_path += "/"
+
+            folder_full_name = os.path.relpath(folder_path, root_path)
+
             folder_readme, folder_tale = process_folder(
-                folder_path, output_path, model_name, fuse
+                folder_path=folder_path,
+                output_path=os.path.join(output_path, folder_full_name)
+                if folder_full_name != "."
+                else output_path,
+                model_name=model_name,
+                fuse=fuse,
+                debug=debug,
+                folder_full_name=folder_full_name,
             )
+
         except Exception as e:
             folder_name = os.path.basename(folder_path)
             logger.info(
@@ -71,12 +98,10 @@ def process_repository(
             )
             folder_tale = None
 
-        if folder_tale is not None:
+        if folder_tale:
+            folders_readmes.append("\n\n" + folder_readme)
             # add root folder summary information
-            if (
-                os.path.basename(folder_path) == os.path.basename(root_path + "/")
-                or os.path.basename(folder_path) == ""
-            ):
+            if folder_path == folders[0]:
                 folder_tales["folders"].append(
                     {
                         "folder_name": os.path.basename(os.path.abspath(root_path)),
@@ -85,13 +110,16 @@ def process_repository(
                     }
                 )
             else:
-                folders_readmes.append(folder_readme)
                 folder_tales["folders"].append(
                     {
-                        "folder_name": os.path.basename(folder_path),
+                        "folder_name": folder_full_name,
                         "folder_summary": folder_tale,
                     }
                 )
+
+    if debug:
+        logger.debug(f"FOLDER_TALES: {folder_tales}")
+        return None
 
     if folder_tales:
         folder_summaries = split_text(str(folder_tales), chunk_size=15000)
@@ -102,12 +130,23 @@ def process_repository(
 
         # inject folders information
         if folders_readmes:
-            folders_information = "\n\n## Folders\n\n" + "".join(folders_readmes)
+            folders_information = "\n\n## Folders" + "".join(folders_readmes)
             root_readme = root_readme + folders_information
 
         # inject project tree
         tree = f"\n\n## Project Tree\n```bash\n{project_tree}```\n\n"
         root_readme = root_readme + tree
+
+        # inject original readme if there is one
+        if original_readme_content:
+            filtered_original_readme = [
+                line for line in original_readme_content if not line.startswith("# ")
+            ]
+            modified_original_readme = "\n\n## Extra notes\n\n" + "".join(
+                filtered_original_readme
+            )
+
+            root_readme = root_readme + modified_original_readme
 
         logger.info("save root json..")
         with open(os.path.join(output_path, "root_level.json"), "w") as json_file:
@@ -125,6 +164,8 @@ def process_folder(
     output_path: str = DEFAULT_OUTPUT_PATH,
     model_name: str = DEFAULT_MODEL_NAME,
     fuse: bool = False,
+    debug: bool = False,
+    folder_full_name: str = None,
 ) -> None:
     save_path = os.path.join(output_path, os.path.basename(folder_path))
     tales = []
@@ -138,7 +179,7 @@ def process_folder(
         ):
             logger.info(f"processing {file_path}")
             try:
-                file_tale = process_file(file_path, save_path, model_name, fuse)
+                file_tale = process_file(file_path, save_path, model_name, fuse, debug)
             except Exception as e:
                 logger.info(
                     f"Failed to create dev tale for {file_path} - Exception: {e}"
@@ -147,16 +188,35 @@ def process_folder(
 
             if file_tale is not None:
                 if file_tale["file_docstring"]:
-                    folder_name = os.path.basename(os.path.abspath(folder_path))
+                    if not folder_full_name:
+                        folder_full_name = os.path.basename(
+                            os.path.abspath(folder_path)
+                        )
+
+                    if folder_full_name == ".":
+                        folder_full_name = "./"
+
                     folder_entry = next(
-                        (item for item in tales if item["folder_name"] == folder_name),
+                        (
+                            item
+                            for item in tales
+                            if item["folder_name"] == folder_full_name
+                        ),
                         None,
                     )
                     if folder_entry is None:
                         folder_entry = {
-                            "folder_name": folder_name,
+                            "folder_name": folder_full_name,
                             "folder_files": [],
                         }
+                        if folder_full_name == ".":
+                            folder_entry[
+                                "folder_description"
+                            ] = """
+                            This is the root path of the repository. The top-level
+                            directory.
+                            """
+
                         tales.append(folder_entry)
 
                     folder_entry["folder_files"].append(
@@ -166,14 +226,28 @@ def process_folder(
                         }
                     )
 
+    if debug:
+        logger.debug(
+            f"""FOLDER INFO:
+        folder_path: {folder_path}
+        output_path: {output_path}
+        save_path: {save_path}
+        """
+        )
+        logger.debug(f"FILE_TALES: {tales}")
+        return "-", "-"
+
     if tales:
         files_summaries = split_text(str(tales), chunk_size=10000)
-        folder_info = redact_tale_information(
+        # split into two calls to avoid issues with json decoding markdow text.
+        folder_readme = redact_tale_information(
             "folder-level", files_summaries, model_name="gpt-3.5-turbo-16k"
-        )
+        )["text"]
+        folder_readme = folder_readme.replace("----------", "")
 
-        folder_readme = folder_info["folder_readme"].replace("----------", "")
-        folder_tale = folder_info["folder_overview"]
+        folder_overview = redact_tale_information(
+            "folder-description", folder_readme, model_name="gpt-3.5-turbo-16k"
+        )["text"]
 
         logger.info("save folder json..")
         with open(os.path.join(save_path, "folder_level.json"), "w") as json_file:
@@ -183,7 +257,7 @@ def process_folder(
         with open(os.path.join(save_path, "README.md"), "w", encoding="utf-8") as file:
             file.write(folder_readme)
 
-        return folder_readme, folder_tale
+        return folder_readme, folder_overview
     return None
 
 
@@ -192,13 +266,18 @@ def process_file(
     output_path: str = DEFAULT_OUTPUT_PATH,
     model_name: str = DEFAULT_MODEL_NAME,
     fuse: bool = False,
+    debug: bool = False,
 ) -> None:
-    if not os.path.exists(output_path):
-        os.makedirs(output_path)
-
     file_name = os.path.basename(file_path)
     file_ext = os.path.splitext(file_name)[-1]
     save_path = os.path.join(output_path, f"{file_name}.json")
+
+    if debug:
+        logger.debug(f"FILE INFO:\nfile_path: {file_path}\nsave_path: {save_path}")
+        return {"file_docstring": "-"}
+
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
 
     logger.info("read dev draft")
     with open(file_path, "r") as file:
@@ -216,8 +295,11 @@ def process_file(
         return found_tale
 
     if not file_ext:
-        bash_docstring = redact_tale_information("unknow-top-level", code)["text"]
-        return {"file_docstring": bash_docstring}
+        unknown_file_data = {"file_name": file_name, "file_content": code}
+        file_docstring = redact_tale_information("unknow-top-level", unknown_file_data)[
+            "text"
+        ]
+        return {"file_docstring": file_docstring}
 
     logger.info("split dev draft ideas")
     big_docs = split_code(code, language=LANGUAGES[file_ext], chunk_size=10000)
@@ -332,12 +414,20 @@ def fuse_documentation(code, tale, output_path, file_name, file_ext):
     help="The OpenAI model name you want to use. \
     https://platform.openai.com/docs/models",
 )
+@click.option(
+    "--debug",
+    "debug",
+    is_flag=True,
+    default=False,
+    help="Mock answer and avoid GPT calls",
+)
 def main(
     path: str,
     recursive: bool,
     fuse: bool,
     output_path: str = DEFAULT_OUTPUT_PATH,
     model_name: str = DEFAULT_MODEL_NAME,
+    debug: bool = False,
 ):
     load_dotenv()
 
@@ -349,13 +439,31 @@ def main(
     if os.path.isdir(path):
         if recursive:
             logger.info("Processing repository")
-            process_repository(path, output_path, model_name, fuse)
+            process_repository(
+                root_path=path,
+                output_path=output_path,
+                model_name=model_name,
+                fuse=fuse,
+                debug=debug,
+            )
         else:
             logger.info("Processing folder")
-            process_folder(path, output_path, model_name, fuse)
+            process_folder(
+                folder_path=path,
+                output_path=output_path,
+                model_name=model_name,
+                fuse=fuse,
+                debug=debug,
+            )
     elif os.path.isfile(path):
         logger.info("Processing file")
-        process_file(path, output_path, model_name, fuse)
+        process_file(
+            file_path=path,
+            output_path=output_path,
+            model_name=model_name,
+            fuse=fuse,
+            debug=debug,
+        )
     else:
         raise f"Invalid input path {path}. Path must be a directory or code file."
 

@@ -15,6 +15,7 @@ from devtale.templates import (
     CODE_LEVEL_TEMPLATE,
     FILE_LEVEL_TEMPLATE,
     FOLDER_LEVEL_TEMPLATE,
+    FOLDER_SHORT_DESCRIPTION_TEMPLATE,
     ROOT_LEVEL_TEMPLATE,
     UNKNOWN_FILE_LEVEL_TEMPLATE,
 )
@@ -24,6 +25,7 @@ TYPE_INFORMATION = {
     "folder-level": FOLDER_LEVEL_TEMPLATE,
     "root-level": ROOT_LEVEL_TEMPLATE,
     "unknow-top-level": UNKNOWN_FILE_LEVEL_TEMPLATE,
+    "folder-description": FOLDER_SHORT_DESCRIPTION_TEMPLATE,
 }
 
 
@@ -102,19 +104,12 @@ def redact_tale_information(
     teller_of_tales = LLMChain(
         llm=OpenAI(model_name=model_name), prompt=prompt, verbose=verbose
     )
-    if not content_type == "unknow-top-level":
+    if content_type not in ["unknow-top-level", "folder-description"]:
         information = str(docs[0].page_content)
     else:
-        information = docs
+        information = str(docs)
 
     text_answer = teller_of_tales({"information": information})
-
-    if content_type == "folder-level":
-        json_answer = convert_to_json(text_answer)
-        if not json_answer:
-            print("Returning empty JSON due to a failure")
-            json_answer = {"folder_overview": "", "folder_readme": ""}
-        return json_answer
 
     return text_answer
 
@@ -122,6 +117,7 @@ def redact_tale_information(
 def convert_to_json(text_answer):
     try:
         result_json = json.loads(text_answer["text"])
+        return result_json
     except JSONDecodeError:
         try:
             text = text_answer["text"].replace("\\n", "\n")
@@ -133,6 +129,7 @@ def convert_to_json(text_answer):
 
             json_text = _add_escape_characters(json_text)
             result_json = json.loads(json_text)
+            return result_json
 
         except Exception as e:
             print(
@@ -140,7 +137,6 @@ def convert_to_json(text_answer):
                 Error: {e} \n Result: {text_answer['text']}"
             )
             return None
-    return result_json
 
 
 def get_unit_tale(short_doc, code_elements, model_name="gpt-4", verbose=False):
