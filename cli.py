@@ -227,12 +227,15 @@ def process_folder(
 
     if tales:
         files_summaries = split_text(str(tales), chunk_size=10000)
-        folder_info = redact_tale_information(
+        # split into two calls to avoid issues with json decoding markdow text.
+        folder_readme = redact_tale_information(
             "folder-level", files_summaries, model_name="gpt-3.5-turbo-16k"
-        )
+        )["text"]
+        folder_readme = folder_readme.replace("----------", "")
 
-        folder_readme = folder_info["folder_readme"].replace("----------", "")
-        folder_tale = folder_info["folder_overview"]
+        folder_overview = redact_tale_information(
+            "folder-description", folder_readme, model_name="text-davinci-003"
+        )["text"]
 
         logger.info("save folder json..")
         with open(os.path.join(save_path, "folder_level.json"), "w") as json_file:
@@ -242,7 +245,7 @@ def process_folder(
         with open(os.path.join(save_path, "README.md"), "w", encoding="utf-8") as file:
             file.write(folder_readme)
 
-        return folder_readme, folder_tale
+        return folder_readme, folder_overview
     return None
 
 

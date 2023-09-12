@@ -82,11 +82,6 @@ Folder information: <<< {information} >>>
 Ensure proper formatting and adhere to Markdown syntax guidelines, \
 and always use escaped newlines.
 Do not add sections that are not listed in the provided structure.
-
-Output your answer as a JSON with the keys: folder_overview and folder_readme.
-
-folder_readme is the markdown text, and folder_overview is a brief description \
-of the folder context.
 """
 
 
@@ -118,4 +113,11 @@ Repository information: <<< {information} >>>
 
 Ensure proper formatting and adhere to Markdown syntax guidelines.
 Do not add sections that are not listed in the provided structure.
+"""
+
+FOLDER_SHORT_DESCRIPTION_TEMPLATE = """
+Generate a one-line description of the folder's purpose based on \
+its following readme enclosed within the <<< >>> delimiters
+
+README: <<< {information} >>>
 """
