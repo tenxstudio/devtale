@@ -82,6 +82,8 @@ class GoAggregator:
 
     def _document_file(self, documentation, code):
         file_description = self._break_large_strings(documentation["file_docstring"])
-        code = file_description + "\n" + code
+        words = code.split()
+        if words[0] != "//" and words[0] != "/*":
+            code = file_description + "\n" + code
 
         return code
