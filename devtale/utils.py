@@ -5,9 +5,11 @@ from json import JSONDecodeError
 from pathlib import Path
 
 from langchain import LLMChain, OpenAI, PromptTemplate
-from langchain.chat_models import ChatOpenAI
+from langchain.chat_models import ChatOpenAI, ChatLiteLLM
 from langchain.output_parsers import PydanticOutputParser
 from langchain.text_splitter import RecursiveCharacterTextSplitter
+
+import litellm
 
 from devtale.schema import FileDocumentation
 from devtale.templates import (
@@ -28,6 +30,12 @@ TYPE_INFORMATION = {
     "folder-description": FOLDER_SHORT_DESCRIPTION_TEMPLATE,
 }
 
+# budget manager code
+def check_budget(budget_manager, session_id):
+    current_cost = budget_manager.get_current_cost(user=session_id)
+    session_budget = budget_manager.get_total_budget(session_id)
+    if budget_manager.get_current_cost(user=session_id) > budget_manager.get_total_budget(session_id):
+      raise Exception(f"Exceeded the maximum budget for this session - current cost: {current_cost}, session budget: {session_budget}")
 
 def split_text(text, chunk_size=1000, chunk_overlap=0):
     text_splitter = RecursiveCharacterTextSplitter(
@@ -45,15 +53,15 @@ def split_code(code, language, chunk_size=1000, chunk_overlap=0):
     return docs
 
 
-def extract_code_elements(big_doc, verbose=False):
+def extract_code_elements(big_doc, budget_manager = None, session_id=None, verbose=False):
     prompt = PromptTemplate(
         template=CODE_EXTRACTOR_TEMPLATE,
         input_variables=["code"],
     )
+    check_budget(budget_manager, session_id) # check if within session budget
     extractor = LLMChain(
-        llm=ChatOpenAI(model_name="gpt-4"), prompt=prompt, verbose=verbose
+        llm=ChatLiteLLM(model_name="gpt-4"), prompt=prompt, verbose=verbose
     )
-
     result_string = extractor({"code": big_doc.page_content})
     return result_string["text"]
 
@@ -139,15 +147,16 @@ def convert_to_json(text_answer):
             return None
 
 
-def get_unit_tale(short_doc, code_elements, model_name="gpt-4", verbose=False):
+def get_unit_tale(short_doc, code_elements, model_name="gpt-4", budget_manager=None, session_id=None, verbose=False):
     parser = PydanticOutputParser(pydantic_object=FileDocumentation)
     prompt = PromptTemplate(
         template=CODE_LEVEL_TEMPLATE,
         input_variables=["code", "code_elements"],
         partial_variables={"format_instructions": parser.get_format_instructions()},
     )
+    check_budget(budget_manager, session_id) # check if within session budget
     teller_of_tales = LLMChain(
-        llm=ChatOpenAI(model_name=model_name), prompt=prompt, verbose=verbose
+        llm=ChatLiteLLM(model_name=model_name), prompt=prompt, verbose=verbose
     )
 
     result_string = teller_of_tales(

@@ -6,6 +6,8 @@ import os
 
 import click
 from dotenv import load_dotenv
+import uuid
+import litellm
 
 from devtale.aggregators import GoAggregator, PHPAggregator, PythonAggregator
 from devtale.constants import ALLOWED_EXTENSIONS, LANGUAGES
@@ -23,6 +25,7 @@ from devtale.utils import (
 DEFAULT_OUTPUT_PATH = "devtale_demo/"
 DEFAULT_MODEL_NAME = "gpt-4"
 
+budget_manager = litellm.BudgetManager(project_name="devtale")
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -305,10 +308,16 @@ def process_file(
     big_docs = split_code(code, language=LANGUAGES[file_ext], chunk_size=10000)
     short_docs = split_code(code, language=LANGUAGES[file_ext], chunk_size=3000)
 
+    # check budget before making GPT-4 calls in extract_code_elements and get_unit_tale
+    session_id = str(uuid.uuid4()) # generate an id for this session
+    max_budget = 10 # default max session budget to $10
+
+    budget_manager.create_budget(total_budget=max_budget, user=session_id) # create a budget for this user session
+
     logger.info("extract code elements")
     code_elements = []
     for idx, doc in enumerate(big_docs):
-        elements_set = extract_code_elements(doc)
+        elements_set = extract_code_elements(doc, budget_manager=budget_manager, session_id=session_id)
         if elements_set:
             code_elements.append(elements_set)
 
@@ -330,7 +339,7 @@ def process_file(
     # process only if we have elements to document
     if code_elements_copy:
         for idx, doc in enumerate(short_docs):
-            tale = get_unit_tale(doc, code_elements_copy, model_name=model_name)
+            tale = get_unit_tale(doc, code_elements_copy, model_name=model_name, budget_manager=budget_manager, session_id=session_id)
             tales_list.append(tale)
             logger.info(f"tale section {str(idx+1)}/{len(short_docs)} done.")
 

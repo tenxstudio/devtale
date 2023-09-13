@@ -1,4 +1,5 @@
 langchain
 openai
+litellm
 click
 python-dotenv
