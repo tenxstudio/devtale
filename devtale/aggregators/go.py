@@ -52,6 +52,7 @@ class GoAggregator:
                     docstring = docstrings[name]
                     if not existing_docstring:
                         fixed_docstring = self._break_large_strings(docstring)
+
                         signature = f"{fixed_docstring}\n{signature}"
 
                 updated_code_lines.append(code[last_end:index])
@@ -64,7 +65,7 @@ class GoAggregator:
         return documented_code
 
     def _break_large_strings(self, string, max_lenght=90):
-        words = string.split()
+        words = string.replace("\\n", " \n ").split()
         lines = []
         current_line = ""
         for word in words:
@@ -82,6 +83,8 @@ class GoAggregator:
 
     def _document_file(self, documentation, code):
         file_description = self._break_large_strings(documentation["file_docstring"])
-        code = file_description + "\n" + code
+        words = code.split()
+        if words[0] != "//" and words[0] != "/*":
+            code = file_description + "\n" + code
 
         return code
