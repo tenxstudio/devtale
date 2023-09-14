@@ -1,6 +1,6 @@
 # devtale
 
-Generate full documentation for your code repos.
+Generate full documentation for your code repos. `devtale` supports Python, Go, Javascript, and PHP files.
 
 ## Installation
 
@@ -21,7 +21,7 @@ pip install -r requirements.txt
 
 ### Terminal
 
-> Note: currently, devtale only supports Python and PHP languages and GPT-4 as LLM.
+> Note: currently, devtale only supports GPT-4 as LLM.
 
 - Create a `.env` file in the root directory and set your `OPENAI_API_KEY` there.
 
