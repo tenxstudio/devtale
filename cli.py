@@ -7,7 +7,12 @@ import os
 import click
 from dotenv import load_dotenv
 
-from devtale.aggregators import GoAggregator, PHPAggregator, PythonAggregator
+from devtale.aggregators import (
+    GoAggregator,
+    JavascriptAggregator,
+    PHPAggregator,
+    PythonAggregator,
+)
 from devtale.constants import ALLOWED_EXTENSIONS, LANGUAGES
 from devtale.utils import (
     build_project_tree,
@@ -367,6 +372,8 @@ def fuse_documentation(code, tale, output_path, file_name, file_ext):
         aggregator = PHPAggregator()
     elif file_ext == ".go":
         aggregator = GoAggregator()
+    elif file_ext == ".js":
+        aggregator = JavascriptAggregator()
 
     fused_tale = aggregator.document(code=code, documentation=tale)
     with open(save_path, "w") as file:
