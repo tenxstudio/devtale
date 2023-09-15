@@ -39,16 +39,21 @@ To document an entire repository include the `-r` (recursive) flag. The program 
 
 - In the repository setting -> Secrets and Variables -> Actions -> Create `OPENAI_API_KEY` repository secret
 
-- Add the following step in your workflow
+- Add the following step in your workflow. Ensure to specify the write permission to avoid 403 errors when attempting to push the devtale PR.
 
 ```bash
-- name: Document
-  uses: mystral-ai/devtale@v0.1
-  with:
-    OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-    path: ${{ github.workspace }}
-    recursive: true
-    target_branch: main
+jobs:
+  code-documentation:
+    runs-on: ubuntu-latest
+    permissions: write-all
+    steps:
+      - name: Document
+        uses: mystral-ai/devtale@hotfix/v0.1.1
+        with:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          path: ${{ github.workspace }}
+          recursive: true
+          target_branch: main
 ```
 
 The `recursive` option allows you to document the entire repository. Alternatively, you can specify a specific path to document a single file or folder and set `recursive` to `false`. The workflow action will automatically create the `devtale/documentation` branch and push a new pull request for your review towards the `target_branch`, including the added documentation.
