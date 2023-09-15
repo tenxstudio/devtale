@@ -1,5 +1,8 @@
 name: "devtale-doc"
 description: "Automatically document a repository, folder, or file."
+branding:
+  icon: "file-text"
+  color: "blue"
 
 inputs:
   openai_api_key:
