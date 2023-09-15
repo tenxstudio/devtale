@@ -64,4 +64,4 @@ runs:
         body: This PR incorporates automatically generated documentation into previously undocumented code files.
         branch: devtale/documentation
         base: ${{ inputs.target_branch }}
-        delete-branch: false
+        delete-branch: true
