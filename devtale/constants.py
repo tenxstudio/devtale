@@ -10,3 +10,5 @@ LANGUAGES = {
     ".go": Language.GO,
     ".js": Language.JS,
 }
+
+DOCSTRING_LABEL = "@DEVTALE-GENERATED:"

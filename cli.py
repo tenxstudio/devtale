@@ -13,7 +13,7 @@ from devtale.aggregators import (
     PHPAggregator,
     PythonAggregator,
 )
-from devtale.constants import ALLOWED_EXTENSIONS, LANGUAGES
+from devtale.constants import ALLOWED_EXTENSIONS, DOCSTRING_LABEL, LANGUAGES
 from devtale.utils import (
     build_project_tree,
     extract_code_elements,
@@ -350,7 +350,9 @@ def process_file(
 
     logger.info("add dev tale summary")
     summaries = split_text(str(code_elements_dict["summary"]), chunk_size=9000)
-    tale["file_docstring"] = redact_tale_information("top-level", summaries)["text"]
+    tale["file_docstring"] = (
+        DOCSTRING_LABEL + "\n" + redact_tale_information("top-level", summaries)["text"]
+    )
 
     logger.info(f"save dev tale in: {save_path}")
     with open(save_path, "w") as json_file:

@@ -9,6 +9,7 @@ from langchain.chat_models import ChatOpenAI
 from langchain.output_parsers import PydanticOutputParser
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
+from devtale.constants import DOCSTRING_LABEL
 from devtale.schema import FileDocumentation
 from devtale.templates import (
     CODE_EXTRACTOR_TEMPLATE,
@@ -186,6 +187,9 @@ def fuse_tales(tales_list, code, code_elements_dict):
                         class_name, code, code_elements_dict["classes"]
                     ):
                         unique_classes.add(class_name)
+                        class_info["class_docstring"] = (
+                            DOCSTRING_LABEL + "\n" + class_info["class_docstring"]
+                        )
                         fused_tale["classes"].append(class_info)
                 else:
                     if tale not in errors:
@@ -199,6 +203,9 @@ def fuse_tales(tales_list, code, code_elements_dict):
                         method_name, code, code_elements_dict["methods"]
                     ):
                         unique_methods.add(method_name)
+                        method_info["method_docstring"] = (
+                            DOCSTRING_LABEL + "\n" + method_info["method_docstring"]
+                        )
                         fused_tale["methods"].append(method_info)
                 else:
                     if tale not in errors:
