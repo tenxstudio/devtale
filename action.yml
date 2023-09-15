@@ -1,4 +1,4 @@
-name: "devtale"
+name: "devtale-doc"
 description: "Automatically document a repository, folder, or file."
 
 inputs:
