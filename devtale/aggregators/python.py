@@ -31,7 +31,7 @@ class PythonAggregator:
             prefix = splited_definition[0]
             postfix = splited_definition[-1]
 
-            pattern = r"" + prefix + "\s+" + name + "[\s\S]*? " + postfix
+            pattern = r"" + prefix + "\s+" + name + "[\s\S]*? " + re.escape(postfix)
             type_item = "method" if prefix == "def" else "class"
             docstring = self._get_docstring(type_item, name, documentation)
             docstring = self._fix_docstring(docstring)
