@@ -59,7 +59,6 @@ runs:
     - name: Push PR
       uses: peter-evans/create-pull-request@v5
       with:
-        token: ${{ secrets.GITHUB_TOKEN }}
         commit-message: add docstrings
         title: "[devtale] Add documentation"
         body: This PR incorporates automatically generated documentation into previously undocumented code files.
