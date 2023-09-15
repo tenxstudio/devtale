@@ -30,7 +30,7 @@ runs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r requirements.txt
+        pip install -r ${{ github.action_path }}/requirements.txt
       shell: bash
 
     - name: Document
@@ -50,6 +50,10 @@ runs:
       run: |
         rm -f *.py.json
         rm -f *.php.json
+        rm -f *.go.json
+        rm -f *.js.json
+        rm -f *folder_level.json
+        rm -f *root_level.json
       shell: bash
 
     - name: Push PR
