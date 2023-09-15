@@ -31,9 +31,9 @@ runs:
       run: |
         pwd
         ls
-        echo "${{ github.workspace }}"
+        echo "${{ github.action_path }}"
         python -m pip install --upgrade pip
-        pip install -r ${{ github.workspace }}/requirements.txt
+        pip install -r ${{ github.action_path }}/requirements.txt
       shell: bash
 
     - name: Document
