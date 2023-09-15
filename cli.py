@@ -350,16 +350,19 @@ def process_file(
 
     logger.info("add dev tale summary")
     summaries = split_text(str(code_elements_dict["summary"]), chunk_size=9000)
-    tale["file_docstring"] = (
-        DOCSTRING_LABEL + "\n" + redact_tale_information("top-level", summaries)["text"]
-    )
+
+    file_docstring = redact_tale_information("top-level", summaries)["text"]
+
+    if fuse:
+        # add docstring label only to insert it along the docstring into the code
+        tale["file_docstring"] = DOCSTRING_LABEL + "\n" + file_docstring
+        fuse_documentation(code, tale, output_path, file_name, file_ext)
+
+    tale["file_docstring"] = file_docstring
 
     logger.info(f"save dev tale in: {save_path}")
     with open(save_path, "w") as json_file:
         json.dump(tale, json_file, indent=2)
-
-    if fuse:
-        fuse_documentation(code, tale, output_path, file_name, file_ext)
 
     return tale
 
