@@ -13,7 +13,12 @@ from devtale.aggregators import (
     PHPAggregator,
     PythonAggregator,
 )
-from devtale.constants import ALLOWED_EXTENSIONS, DOCSTRING_LABEL, LANGUAGES
+from devtale.constants import (
+    ALLOWED_EXTENSIONS,
+    ALLOWED_NO_CODE_EXTENSIONS,
+    DOCSTRING_LABEL,
+    LANGUAGES,
+)
 from devtale.utils import (
     build_project_tree,
     extract_code_elements,
@@ -178,9 +183,9 @@ def process_folder(
     for file_name in os.listdir(folder_path):
         file_path = os.path.join(folder_path, file_name)
 
-        if (
-            os.path.isfile(file_path)
-            and os.path.splitext(file_name)[1] in ALLOWED_EXTENSIONS
+        if os.path.isfile(file_path) and (
+            os.path.splitext(file_name)[1] in ALLOWED_EXTENSIONS
+            or os.path.splitext(file_name)[1] in ALLOWED_NO_CODE_EXTENSIONS
         ):
             logger.info(f"processing {file_path}")
             try:
@@ -299,9 +304,14 @@ def process_file(
             fuse_documentation(code, found_tale, output_path, file_name, file_ext)
         return found_tale
 
-    if not file_ext:
-        unknown_file_data = {"file_name": file_name, "file_content": code}
-        file_docstring = redact_tale_information("unknow-top-level", unknown_file_data)[
+    if not file_ext or file_ext in ALLOWED_NO_CODE_EXTENSIONS:
+        # a small single chunk is enough
+        no_code_file = split_text(code, chunk_size=5000)[0].page_content
+        no_code_file_data = {
+            "file_name": file_name,
+            "file_content": no_code_file,
+        }
+        file_docstring = redact_tale_information("no-code-file", no_code_file_data)[
             "text"
         ]
         return {"file_docstring": file_docstring}
