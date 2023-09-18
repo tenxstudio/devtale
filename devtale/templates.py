@@ -39,7 +39,7 @@ use escaped newlines.
 Input: <<< {code} >>>
 """
 
-UNKNOWN_FILE_LEVEL_TEMPLATE = """
+NO_CODE_FILE_TEMPLATE = """
 Using the following file data enclosed within the <<< >>> delimeters write a \
 top-file level concise summary that effectively captures the overall purpose and \
 functionality of the file.

@@ -17,15 +17,15 @@ from devtale.templates import (
     FILE_LEVEL_TEMPLATE,
     FOLDER_LEVEL_TEMPLATE,
     FOLDER_SHORT_DESCRIPTION_TEMPLATE,
+    NO_CODE_FILE_TEMPLATE,
     ROOT_LEVEL_TEMPLATE,
-    UNKNOWN_FILE_LEVEL_TEMPLATE,
 )
 
 TYPE_INFORMATION = {
     "top-level": FILE_LEVEL_TEMPLATE,
     "folder-level": FOLDER_LEVEL_TEMPLATE,
     "root-level": ROOT_LEVEL_TEMPLATE,
-    "unknow-top-level": UNKNOWN_FILE_LEVEL_TEMPLATE,
+    "no-code-file": NO_CODE_FILE_TEMPLATE,
     "folder-description": FOLDER_SHORT_DESCRIPTION_TEMPLATE,
 }
 
@@ -105,7 +105,7 @@ def redact_tale_information(
     teller_of_tales = LLMChain(
         llm=OpenAI(model_name=model_name), prompt=prompt, verbose=verbose
     )
-    if content_type not in ["unknow-top-level", "folder-description"]:
+    if content_type not in ["no-code-file", "folder-description"]:
         information = str(docs[0].page_content)
     else:
         information = str(docs)
