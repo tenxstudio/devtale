@@ -28,7 +28,6 @@ from devtale.utils import (
     redact_tale_information,
     split_code,
     split_text,
-    update_budget,
 )
 
 DEFAULT_OUTPUT_PATH = "devtale_demo/"
@@ -47,7 +46,7 @@ def process_repository(
     debug: bool = False,
     is_estimation: bool = True,
 ) -> None:
-    budget = 0
+    cost = 0
     folder_tales = {
         "repository_name": os.path.basename(os.path.abspath(root_path)),
         "folders": [],
@@ -93,7 +92,7 @@ def process_repository(
 
             folder_full_name = os.path.relpath(folder_path, root_path)
 
-            folder_readme, folder_tale, folder_budget = process_folder(
+            folder_readme, folder_tale, folder_cost = process_folder(
                 folder_path=folder_path,
                 output_path=os.path.join(output_path, folder_full_name)
                 if folder_full_name != "."
@@ -104,7 +103,7 @@ def process_repository(
                 folder_full_name=folder_full_name,
                 is_estimation=is_estimation,
             )
-            budget += folder_budget
+            cost += folder_cost
 
         except Exception as e:
             folder_name = os.path.basename(folder_path)
@@ -138,13 +137,13 @@ def process_repository(
 
     if folder_tales:
         folder_summaries = split_text(str(folder_tales), chunk_size=15000)
-        root_readme, tokens = redact_tale_information(
+        root_readme, call_cost = redact_tale_information(
             "root-level",
             folder_summaries,
             model_name="gpt-3.5-turbo-16k",
             is_estimation=is_estimation,
         )
-        budget += update_budget(tokens, "gpt-3.5-turbo-16k")
+        cost += call_cost
         root_readme = root_readme.replace("----------", "")
 
         # inject folders information
@@ -178,7 +177,7 @@ def process_repository(
             ) as file:
                 file.write(root_readme)
 
-    return budget
+    return cost
 
 
 def process_folder(
@@ -190,7 +189,7 @@ def process_folder(
     folder_full_name: str = None,
     is_estimation: bool = False,
 ) -> None:
-    budget = 0
+    cost = 0
     save_path = os.path.join(output_path, os.path.basename(folder_path))
     tales = []
 
@@ -203,10 +202,10 @@ def process_folder(
         ):
             logger.info(f"processing {file_path}")
             try:
-                file_tale, file_budget = process_file(
+                file_tale, file_cost = process_file(
                     file_path, save_path, model_name, fuse, debug, is_estimation
                 )
-                budget += file_budget
+                cost += file_cost
             except Exception as e:
                 logger.info(
                     f"Failed to create dev tale for {file_path} - Exception: {e}"
@@ -262,12 +261,12 @@ def process_folder(
         """
         )
         logger.debug(f"FILE_TALES: {tales}")
-        return "-", "-", budget
+        return "-", "-", cost
 
     if tales:
         files_summaries = split_text(str(tales), chunk_size=10000)
         # split into two calls to avoid issues with json decoding markdow text.
-        folder_readme, fl_tokens = redact_tale_information(
+        folder_readme, fl_cost = redact_tale_information(
             "folder-level",
             files_summaries,
             model_name="gpt-3.5-turbo-16k",
@@ -275,14 +274,14 @@ def process_folder(
         )
         folder_readme = folder_readme.replace("----------", "")
 
-        folder_overview, fd_tokens = redact_tale_information(
+        folder_overview, fd_cost = redact_tale_information(
             "folder-description",
             folder_readme,
             model_name="gpt-3.5-turbo-16k",
             is_estimation=is_estimation,
         )
 
-        budget += update_budget(fl_tokens + fd_tokens, "gpt-3.5-turbo-16k")
+        cost += fl_cost + fd_cost
 
         if not is_estimation:
             logger.info("save folder json..")
@@ -295,8 +294,8 @@ def process_folder(
             ) as file:
                 file.write(folder_readme)
 
-        return folder_readme, folder_overview, budget
-    return None, None, budget
+        return folder_readme, folder_overview, cost
+    return None, None, cost
 
 
 def process_file(
@@ -307,14 +306,14 @@ def process_file(
     debug: bool = False,
     is_estimation: bool = False,
 ) -> None:
-    budget = 0
+    cost = 0
     file_name = os.path.basename(file_path)
     file_ext = os.path.splitext(file_name)[-1]
     save_path = os.path.join(output_path, f"{file_name}.json")
 
     if debug:
         logger.debug(f"FILE INFO:\nfile_path: {file_path}\nsave_path: {save_path}")
-        return {"file_docstring": "-"}, budget
+        return {"file_docstring": "-"}, cost
 
     if not os.path.exists(output_path):
         os.makedirs(output_path)
@@ -324,7 +323,7 @@ def process_file(
         code = file.read()
 
     if not code:
-        return {"file_docstring": ""}, budget
+        return {"file_docstring": ""}, cost
 
     if os.path.exists(save_path):
         logger.info(f"Skipping {file_name} as its tale file already exists.")
@@ -332,7 +331,7 @@ def process_file(
             found_tale = json.load(file)
         if fuse:
             fuse_documentation(code, found_tale, output_path, file_name, file_ext)
-        return found_tale, budget
+        return found_tale, cost
 
     if not file_ext or file_ext in ALLOWED_NO_CODE_EXTENSIONS:
         # a small single chunk is enough
@@ -341,15 +340,15 @@ def process_file(
             "file_name": file_name,
             "file_content": no_code_file,
         }
-        file_docstring, tokens = redact_tale_information(
+        file_docstring, call_cost = redact_tale_information(
             content_type="no-code-file",
             docs=no_code_file_data,
             model_name="text-davinci-003",
             is_estimation=is_estimation,
         )
-        budget += update_budget(tokens, "text-davinci-003")
+        cost += call_cost
 
-        return {"file_docstring": file_docstring}, budget
+        return {"file_docstring": file_docstring}, cost
 
     logger.info("split dev draft ideas")
     big_docs = split_code(code, language=LANGUAGES[file_ext], chunk_size=10000)
@@ -358,10 +357,10 @@ def process_file(
     logger.info("extract code elements")
     code_elements = []
     for idx, doc in enumerate(big_docs):
-        elements_set, tokens = extract_code_elements(
+        elements_set, call_cost = extract_code_elements(
             big_doc=doc, model_name=model_name, is_estimation=is_estimation
         )
-        budget += update_budget(tokens, model_name)
+        cost += call_cost
         if elements_set:
             code_elements.append(elements_set)
 
@@ -383,13 +382,13 @@ def process_file(
     # process only if we have elements to document
     if code_elements_copy or is_estimation:
         for idx, doc in enumerate(short_docs):
-            tale, tokens = get_unit_tale(
+            tale, call_cost = get_unit_tale(
                 short_doc=doc,
                 code_elements=code_elements_copy,
                 model_name=model_name,
                 is_estimation=is_estimation,
             )
-            budget += update_budget(tokens, model_name)
+            cost += call_cost
             tales_list.append(tale)
             logger.info(f"tale section {str(idx+1)}/{len(short_docs)} done.")
 
@@ -405,13 +404,13 @@ def process_file(
     logger.info("add dev tale summary")
     summaries = split_text(str(code_elements_dict["summary"]), chunk_size=9000)
 
-    file_docstring, tokens = redact_tale_information(
+    file_docstring, call_cost = redact_tale_information(
         content_type="top-level",
         docs=summaries,
         model_name="text-davinci-003",
         is_estimation=is_estimation,
     )
-    budget += update_budget(tokens, "text-davinci-003")
+    cost += call_cost
 
     if fuse and not is_estimation:
         # add docstring label only to insert it along the docstring into the code
@@ -426,7 +425,7 @@ def process_file(
         with open(save_path, "w") as json_file:
             json.dump(tale, json_file, indent=2)
 
-    return tale, budget
+    return tale, cost
 
 
 def fuse_documentation(code, tale, output_path, file_name, file_ext):
@@ -557,7 +556,7 @@ def main(
     if is_estimation:
         logger.info(f"Approximate cost: {price}")
     else:
-        logger.info(f"Cost: {price}")
+        logger.info(f"Total cost: {price}")
 
 
 if __name__ == "__main__":

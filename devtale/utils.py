@@ -6,6 +6,7 @@ from pathlib import Path
 
 import tiktoken
 from langchain import LLMChain, OpenAI, PromptTemplate
+from langchain.callbacks import get_openai_callback
 from langchain.chat_models import ChatOpenAI
 from langchain.output_parsers import PydanticOutputParser
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -31,18 +32,14 @@ TYPE_INFORMATION = {
 }
 
 
-def calc_tokens(input: str, model: str) -> int:
+def calculate_cost(input: str, model: str):
     if model == "davinci":
         encoding = "p50k_base"
     else:
         encoding = "cl100k_base"
 
     tokens = tiktoken.get_encoding(encoding).encode(input)
-    return len(tokens)
-
-
-def update_budget(n_tokens, model: str):
-    return (n_tokens / 1000) * GPT_PRICE[model]
+    return (len(tokens) / 1000) * GPT_PRICE[model]
 
 
 def split_text(text, chunk_size=1000, chunk_overlap=0):
@@ -72,12 +69,17 @@ def extract_code_elements(
         llm=ChatOpenAI(model_name=model_name), prompt=prompt, verbose=verbose
     )
 
-    tokens = calc_tokens(prompt.format(code=big_doc.page_content), model_name)
     if is_estimation:
-        return "", tokens
+        estimated_cost = calculate_cost(
+            prompt.format(code=big_doc.page_content), model_name
+        )
+        return "", estimated_cost
 
-    result_string = extractor({"code": big_doc.page_content})
-    return result_string["text"], tokens
+    with get_openai_callback() as cb:
+        result_string = extractor({"code": big_doc.page_content})
+        cost = cb.total_cost
+
+    return result_string["text"], cost
 
 
 def _process_extracted_code_element(text: str):
@@ -135,13 +137,17 @@ def redact_tale_information(
     else:
         information = str(docs)
 
-    tokens = calc_tokens(prompt.format(information=information), model_name)
-
     if is_estimation:
-        return "", tokens
+        estimated_cost = calculate_cost(
+            prompt.format(information=information), model_name
+        )
+        return "", estimated_cost
 
-    text_answer = teller_of_tales({"information": information})
-    return text_answer["text"], tokens
+    with get_openai_callback() as cb:
+        text_answer = teller_of_tales({"information": information})
+        cost = cb.total_cost
+
+    return text_answer["text"], cost
 
 
 def convert_to_json(text_answer):
@@ -182,21 +188,26 @@ def get_unit_tale(
         llm=ChatOpenAI(model_name=model_name), prompt=prompt, verbose=verbose
     )
 
-    tokens = calc_tokens(
-        prompt.format(code=short_doc.page_content, code_elements=str(code_elements)),
-        model_name,
-    )
     if is_estimation:
-        return {"classes": [], "methods": []}, tokens
+        estimated_cost = calculate_cost(
+            prompt.format(
+                code=short_doc.page_content, code_elements=str(code_elements)
+            ),
+            model_name,
+        )
+        return {"classes": [], "methods": []}, estimated_cost
 
-    result_string = teller_of_tales(
-        {"code": short_doc.page_content, "code_elements": code_elements}
-    )
+    with get_openai_callback() as cb:
+        result_string = teller_of_tales(
+            {"code": short_doc.page_content, "code_elements": code_elements}
+        )
+        cost = cb.total_cost
+
     json_answer = convert_to_json(result_string)
     if not json_answer:
         print("Returning empty JSON due to a failure")
         json_answer = {"classes": [], "methods": []}
-    return json_answer, tokens
+    return json_answer, cost
 
 
 def is_hallucination(code_definition, code, expected_definitions):
