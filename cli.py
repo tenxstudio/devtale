@@ -167,15 +167,16 @@ def process_repository(
 
             root_readme = root_readme + modified_original_readme
 
-        logger.info("save root json..")
-        with open(os.path.join(output_path, "root_level.json"), "w") as json_file:
-            json.dump(folder_tales, json_file, indent=2)
+        if not is_estimation:
+            logger.info("save root json..")
+            with open(os.path.join(output_path, "root_level.json"), "w") as json_file:
+                json.dump(folder_tales, json_file, indent=2)
 
-        logger.info(f"saving root index in {output_path}")
-        with open(
-            os.path.join(output_path, "README.md"), "w", encoding="utf-8"
-        ) as file:
-            file.write(root_readme)
+            logger.info(f"saving root index in {output_path}")
+            with open(
+                os.path.join(output_path, "README.md"), "w", encoding="utf-8"
+            ) as file:
+                file.write(root_readme)
 
     return budget
 
@@ -261,7 +262,7 @@ def process_folder(
         """
         )
         logger.debug(f"FILE_TALES: {tales}")
-        return "-", "-"
+        return "-", "-", budget
 
     if tales:
         files_summaries = split_text(str(tales), chunk_size=10000)
@@ -283,13 +284,16 @@ def process_folder(
 
         budget += update_budget(fl_tokens + fd_tokens, "gpt-3.5-turbo-16k")
 
-        logger.info("save folder json..")
-        with open(os.path.join(save_path, "folder_level.json"), "w") as json_file:
-            json.dump(tales, json_file, indent=2)
+        if not is_estimation:
+            logger.info("save folder json..")
+            with open(os.path.join(save_path, "folder_level.json"), "w") as json_file:
+                json.dump(tales, json_file, indent=2)
 
-        logger.info(f"saving index in {save_path}")
-        with open(os.path.join(save_path, "README.md"), "w", encoding="utf-8") as file:
-            file.write(folder_readme)
+            logger.info(f"saving index in {save_path}")
+            with open(
+                os.path.join(save_path, "README.md"), "w", encoding="utf-8"
+            ) as file:
+                file.write(folder_readme)
 
         return folder_readme, folder_overview, budget
     return None, None, budget
@@ -409,7 +413,7 @@ def process_file(
     )
     budget += update_budget(tokens, "text-davinci-003")
 
-    if fuse:
+    if fuse and not is_estimation:
         # add docstring label only to insert it along the docstring into the code
         tale["file_docstring"] = DOCSTRING_LABEL + "\n" + file_docstring
         fuse_documentation(code, tale, output_path, file_name, file_ext)
@@ -417,8 +421,10 @@ def process_file(
     tale["file_docstring"] = file_docstring
 
     logger.info(f"save dev tale in: {save_path}")
-    with open(save_path, "w") as json_file:
-        json.dump(tale, json_file, indent=2)
+
+    if not is_estimation:
+        with open(save_path, "w") as json_file:
+            json.dump(tale, json_file, indent=2)
 
     return tale, budget
 
@@ -489,6 +495,14 @@ def fuse_documentation(code, tale, output_path, file_name, file_ext):
     default=False,
     help="Mock answer and avoid GPT calls",
 )
+@click.option(
+    "--estimation",
+    "is_estimation",
+    is_flag=True,
+    default=False,
+    help="True to calculate an approximate cost of documenting your code without \
+          doing any GPT call",
+)
 def main(
     path: str,
     recursive: bool,
@@ -496,6 +510,7 @@ def main(
     output_path: str = DEFAULT_OUTPUT_PATH,
     model_name: str = DEFAULT_MODEL_NAME,
     debug: bool = False,
+    is_estimation: bool = False,
 ):
     load_dotenv()
 
@@ -513,7 +528,7 @@ def main(
                 model_name=model_name,
                 fuse=fuse,
                 debug=debug,
-                is_estimation=True,
+                is_estimation=is_estimation,
             )
         else:
             logger.info("Processing folder")
@@ -523,7 +538,7 @@ def main(
                 model_name=model_name,
                 fuse=fuse,
                 debug=debug,
-                is_estimation=False,
+                is_estimation=is_estimation,
             )
     elif os.path.isfile(path):
         logger.info("Processing file")
@@ -533,13 +548,16 @@ def main(
             model_name=model_name,
             fuse=fuse,
             debug=debug,
-            is_estimation=False,
+            is_estimation=is_estimation,
         )
 
     else:
         raise f"Invalid input path {path}. Path must be a directory or code file."
 
-    logger.info(f"Rough cost = {price}")
+    if is_estimation:
+        logger.info(f"Approximate cost: {price}")
+    else:
+        logger.info(f"Cost: {price}")
 
 
 if __name__ == "__main__":
