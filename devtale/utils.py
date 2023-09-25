@@ -4,12 +4,13 @@ import re
 from json import JSONDecodeError
 from pathlib import Path
 
+import tiktoken
 from langchain import LLMChain, OpenAI, PromptTemplate
 from langchain.chat_models import ChatOpenAI
 from langchain.output_parsers import PydanticOutputParser
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
-from devtale.constants import DOCSTRING_LABEL
+from devtale.constants import DOCSTRING_LABEL, GPT_PRICE
 from devtale.schema import FileDocumentation
 from devtale.templates import (
     CODE_EXTRACTOR_TEMPLATE,
@@ -30,6 +31,20 @@ TYPE_INFORMATION = {
 }
 
 
+def calc_tokens(input: str, model: str) -> int:
+    if model == "davinci":
+        encoding = "p50k_base"
+    else:
+        encoding = "cl100k_base"
+
+    tokens = tiktoken.get_encoding(encoding).encode(input)
+    return len(tokens)
+
+
+def update_budget(n_tokens, model: str):
+    return (n_tokens / 1000) * GPT_PRICE[model]
+
+
 def split_text(text, chunk_size=1000, chunk_overlap=0):
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size, chunk_overlap=chunk_overlap
@@ -46,17 +61,23 @@ def split_code(code, language, chunk_size=1000, chunk_overlap=0):
     return docs
 
 
-def extract_code_elements(big_doc, verbose=False):
+def extract_code_elements(
+    big_doc, verbose=False, model_name="gpt-4", is_estimation=False
+):
     prompt = PromptTemplate(
         template=CODE_EXTRACTOR_TEMPLATE,
         input_variables=["code"],
     )
     extractor = LLMChain(
-        llm=ChatOpenAI(model_name="gpt-4"), prompt=prompt, verbose=verbose
+        llm=ChatOpenAI(model_name=model_name), prompt=prompt, verbose=verbose
     )
 
+    tokens = calc_tokens(prompt.format(code=big_doc.page_content), model_name)
+    if is_estimation:
+        return "", tokens
+
     result_string = extractor({"code": big_doc.page_content})
-    return result_string["text"]
+    return result_string["text"], tokens
 
 
 def _process_extracted_code_element(text: str):
@@ -97,7 +118,11 @@ def prepare_code_elements(code_elements):
 
 
 def redact_tale_information(
-    content_type, docs, verbose=False, model_name="text-davinci-003"
+    content_type,
+    docs,
+    verbose=False,
+    model_name="text-davinci-003",
+    is_estimation=False,
 ):
     prompt = PromptTemplate(
         template=TYPE_INFORMATION[content_type], input_variables=["information"]
@@ -110,9 +135,13 @@ def redact_tale_information(
     else:
         information = str(docs)
 
-    text_answer = teller_of_tales({"information": information})
+    tokens = calc_tokens(prompt.format(information=information), model_name)
 
-    return text_answer
+    if is_estimation:
+        return "", tokens
+
+    text_answer = teller_of_tales({"information": information})
+    return text_answer["text"], tokens
 
 
 def convert_to_json(text_answer):
@@ -140,7 +169,9 @@ def convert_to_json(text_answer):
             return None
 
 
-def get_unit_tale(short_doc, code_elements, model_name="gpt-4", verbose=False):
+def get_unit_tale(
+    short_doc, code_elements, model_name="gpt-4", verbose=False, is_estimation=False
+):
     parser = PydanticOutputParser(pydantic_object=FileDocumentation)
     prompt = PromptTemplate(
         template=CODE_LEVEL_TEMPLATE,
@@ -151,6 +182,13 @@ def get_unit_tale(short_doc, code_elements, model_name="gpt-4", verbose=False):
         llm=ChatOpenAI(model_name=model_name), prompt=prompt, verbose=verbose
     )
 
+    tokens = calc_tokens(
+        prompt.format(code=short_doc.page_content, code_elements=str(code_elements)),
+        model_name,
+    )
+    if is_estimation:
+        return {"classes": [], "methods": []}, tokens
+
     result_string = teller_of_tales(
         {"code": short_doc.page_content, "code_elements": code_elements}
     )
@@ -158,7 +196,7 @@ def get_unit_tale(short_doc, code_elements, model_name="gpt-4", verbose=False):
     if not json_answer:
         print("Returning empty JSON due to a failure")
         json_answer = {"classes": [], "methods": []}
-    return json_answer
+    return json_answer, tokens
 
 
 def is_hallucination(code_definition, code, expected_definitions):
