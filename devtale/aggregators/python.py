@@ -57,7 +57,7 @@ class PythonAggregator:
                 # add identation to the docstrings
                 lines = comment.split("\n")
                 indented_lines = [
-                    f"{' ' * indentation_size}{line}" if line.strip() else line
+                    f"{' ' * indentation_size}{line.strip()}" if line.strip() else line
                     for line in lines
                 ]
                 comment = "\n".join(indented_lines)
