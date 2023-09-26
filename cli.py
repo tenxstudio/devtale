@@ -315,7 +315,7 @@ def process_file(
         logger.debug(f"FILE INFO:\nfile_path: {file_path}\nsave_path: {save_path}")
         return {"file_docstring": "-"}, cost
 
-    if not os.path.exists(output_path):
+    if not os.path.exists(output_path) and not cost_estimation:
         os.makedirs(output_path)
 
     logger.info("read dev draft")
