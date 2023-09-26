@@ -3,17 +3,20 @@ import re
 
 
 class Placeholder(ast.NodeTransformer):
-    def visit_ClassDef(self, node):
-        docstring = ast.Expr(ast.Str(f"CLASS DOCSTRING PLACEHOLDER {node.name}"))
-        if not node.body or not isinstance(node.body[0], ast.Expr):
-            node.body = [docstring] + node.body
-        return node
+    def visit(self, node):
+        if isinstance(node, ast.ClassDef):
+            docstring = ast.Expr(ast.Str(f"CLASS DOCSTRING PLACEHOLDER {node.name}"))
+            if not node.body or not isinstance(node.body[0], ast.Expr):
+                node.body = [docstring] + node.body
 
-    def visit_FunctionDef(self, node):
-        docstring = ast.Expr(ast.Str(f"METHOD DOCSTRING PLACEHOLDER {node.name}"))
-        if not node.body or not isinstance(node.body[0], ast.Expr):
-            node.body = [docstring] + node.body
-        return node
+        elif isinstance(node, ast.FunctionDef):
+            docstring = ast.Expr(ast.Str(f"METHOD DOCSTRING PLACEHOLDER {node.name}"))
+            if not node.body or not isinstance(node.body[0], ast.Expr):
+                node.body = [docstring] + node.body
+        else:
+            pass
+
+        return self.generic_visit(node)
 
 
 class PythonAggregator:
@@ -28,32 +31,40 @@ class PythonAggregator:
 
         for name, definition in code_definitions.items():
             splited_definition = definition.split()
+
             prefix = splited_definition[0]
             postfix = splited_definition[-1]
 
-            pattern = r"" + prefix + "\s+" + name + "[\s\S]*? " + re.escape(postfix)
             type_item = "method" if prefix == "def" else "class"
+            if len(splited_definition) == 2:
+                postfix = postfix[-1]
+            pattern = r"" + prefix + "\s+" + name + "[\s\S]*?" + re.escape(postfix)
+
             docstring = self._get_docstring(type_item, name, documentation)
             docstring = self._fix_docstring(docstring)
             comment = f'\n"""{docstring}"""'
-            match = re.findall(pattern, documented_code)[0]
+            match = re.findall(pattern, documented_code)
 
-            # use ast to reformat code into lines, trick to make the search easier
-            parsed_text = ast.parse(code)
-            unparsed_text = ast.unparse(parsed_text)
+            if match:
+                # use ast to reformat code into lines, trick to make the search easier
+                match = match[0]
+                parsed_text = ast.parse(code)
+                unparsed_text = ast.unparse(parsed_text)
 
-            indentation_size = self._extract_indentation(unparsed_text, definition)
+                indentation_size = self._extract_indentation(unparsed_text, definition)
 
-            # add identation to the docstrings
-            lines = comment.split("\n")
-            indented_lines = [
-                f"{' ' * indentation_size}{line}" if line.strip() else line
-                for line in lines
-            ]
-            comment = "\n".join(indented_lines)
+                # add identation to the docstrings
+                lines = comment.split("\n")
+                indented_lines = [
+                    f"{' ' * indentation_size}{line.strip()}" if line.strip() else line
+                    for line in lines
+                ]
+                comment = "\n".join(indented_lines)
 
-            # add the docstring
-            documented_code = re.sub(re.escape(match), match + comment, documented_code)
+                # add the docstring
+                documented_code = re.sub(
+                    re.escape(match), match + comment, documented_code
+                )
 
         return documented_code
 
@@ -61,7 +72,9 @@ class PythonAggregator:
         file_description = self._break_large_strings(documentation["file_docstring"])
         docstring = f'"""{file_description}\n"""\n'
 
-        code = docstring + "\n" + code
+        words = code.split()
+        if words[0] != '"""' and words[0] != "#":
+            code = docstring + "\n" + code
 
         return code
 
@@ -113,10 +126,16 @@ class PythonAggregator:
 
         for idx, line in enumerate(lines):
             if code_line in line:
-                next_code_line = lines[idx + 1]
+                for i in range(idx + 1, len(lines)):
+                    next_line = lines[i]
+                    if next_line.strip():
+                        next_code_line = next_line
+                        break
                 break
 
-        indentation_size = len(next_code_line) - len(next_code_line.lstrip())
+        indentation_size = (
+            len(next_code_line) - len(next_code_line.lstrip()) if next_code_line else 0
+        )
         return indentation_size
 
     def _break_large_strings(self, string, max_lenght=90):

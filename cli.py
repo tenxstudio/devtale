@@ -44,7 +44,7 @@ def process_repository(
     model_name: str = DEFAULT_MODEL_NAME,
     fuse: bool = False,
     debug: bool = False,
-    cost_estimation: bool = True,
+    cost_estimation: bool = False,
 ) -> None:
     cost = 0
     folder_tales = {
@@ -315,7 +315,7 @@ def process_file(
         logger.debug(f"FILE INFO:\nfile_path: {file_path}\nsave_path: {save_path}")
         return {"file_docstring": "-"}, cost
 
-    if not os.path.exists(output_path):
+    if not os.path.exists(output_path) and not cost_estimation:
         os.makedirs(output_path)
 
     logger.info("read dev draft")
@@ -530,7 +530,7 @@ def main(
             )
         else:
             logger.info("Processing folder")
-            _, price = process_folder(
+            _, _, price = process_folder(
                 folder_path=path,
                 output_path=output_path,
                 model_name=model_name,
