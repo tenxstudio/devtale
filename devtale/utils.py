@@ -33,7 +33,7 @@ TYPE_INFORMATION = {
 
 
 def calculate_cost(input: str, model: str):
-    if model == "davinci":
+    if model == "text-davinci-003":
         encoding = "p50k_base"
     else:
         encoding = "cl100k_base"
@@ -59,7 +59,7 @@ def split_code(code, language, chunk_size=1000, chunk_overlap=0):
 
 
 def extract_code_elements(
-    big_doc, verbose=False, model_name="gpt-4", is_estimation=False
+    big_doc, verbose=False, model_name="gpt-4", cost_estimation=False
 ):
     prompt = PromptTemplate(
         template=CODE_EXTRACTOR_TEMPLATE,
@@ -69,7 +69,7 @@ def extract_code_elements(
         llm=ChatOpenAI(model_name=model_name), prompt=prompt, verbose=verbose
     )
 
-    if is_estimation:
+    if cost_estimation:
         estimated_cost = calculate_cost(
             prompt.format(code=big_doc.page_content), model_name
         )
@@ -124,7 +124,7 @@ def redact_tale_information(
     docs,
     verbose=False,
     model_name="text-davinci-003",
-    is_estimation=False,
+    cost_estimation=False,
 ):
     prompt = PromptTemplate(
         template=TYPE_INFORMATION[content_type], input_variables=["information"]
@@ -137,7 +137,7 @@ def redact_tale_information(
     else:
         information = str(docs)
 
-    if is_estimation:
+    if cost_estimation:
         estimated_cost = calculate_cost(
             prompt.format(information=information), model_name
         )
@@ -176,7 +176,7 @@ def convert_to_json(text_answer):
 
 
 def get_unit_tale(
-    short_doc, code_elements, model_name="gpt-4", verbose=False, is_estimation=False
+    short_doc, code_elements, model_name="gpt-4", verbose=False, cost_estimation=False
 ):
     parser = PydanticOutputParser(pydantic_object=FileDocumentation)
     prompt = PromptTemplate(
@@ -188,7 +188,7 @@ def get_unit_tale(
         llm=ChatOpenAI(model_name=model_name), prompt=prompt, verbose=verbose
     )
 
-    if is_estimation:
+    if cost_estimation:
         estimated_cost = calculate_cost(
             prompt.format(
                 code=short_doc.page_content, code_elements=str(code_elements)

@@ -44,7 +44,7 @@ def process_repository(
     model_name: str = DEFAULT_MODEL_NAME,
     fuse: bool = False,
     debug: bool = False,
-    is_estimation: bool = True,
+    cost_estimation: bool = True,
 ) -> None:
     cost = 0
     folder_tales = {
@@ -101,7 +101,7 @@ def process_repository(
                 fuse=fuse,
                 debug=debug,
                 folder_full_name=folder_full_name,
-                is_estimation=is_estimation,
+                cost_estimation=cost_estimation,
             )
             cost += folder_cost
 
@@ -141,7 +141,7 @@ def process_repository(
             "root-level",
             folder_summaries,
             model_name="gpt-3.5-turbo-16k",
-            is_estimation=is_estimation,
+            cost_estimation=cost_estimation,
         )
         cost += call_cost
         root_readme = root_readme.replace("----------", "")
@@ -166,7 +166,7 @@ def process_repository(
 
             root_readme = root_readme + modified_original_readme
 
-        if not is_estimation:
+        if not cost_estimation:
             logger.info("save root json..")
             with open(os.path.join(output_path, "root_level.json"), "w") as json_file:
                 json.dump(folder_tales, json_file, indent=2)
@@ -187,7 +187,7 @@ def process_folder(
     fuse: bool = False,
     debug: bool = False,
     folder_full_name: str = None,
-    is_estimation: bool = False,
+    cost_estimation: bool = False,
 ) -> None:
     cost = 0
     save_path = os.path.join(output_path, os.path.basename(folder_path))
@@ -203,7 +203,7 @@ def process_folder(
             logger.info(f"processing {file_path}")
             try:
                 file_tale, file_cost = process_file(
-                    file_path, save_path, model_name, fuse, debug, is_estimation
+                    file_path, save_path, model_name, fuse, debug, cost_estimation
                 )
                 cost += file_cost
             except Exception as e:
@@ -270,7 +270,7 @@ def process_folder(
             "folder-level",
             files_summaries,
             model_name="gpt-3.5-turbo-16k",
-            is_estimation=is_estimation,
+            cost_estimation=cost_estimation,
         )
         folder_readme = folder_readme.replace("----------", "")
 
@@ -278,12 +278,12 @@ def process_folder(
             "folder-description",
             folder_readme,
             model_name="gpt-3.5-turbo-16k",
-            is_estimation=is_estimation,
+            cost_estimation=cost_estimation,
         )
 
         cost += fl_cost + fd_cost
 
-        if not is_estimation:
+        if not cost_estimation:
             logger.info("save folder json..")
             with open(os.path.join(save_path, "folder_level.json"), "w") as json_file:
                 json.dump(tales, json_file, indent=2)
@@ -304,7 +304,7 @@ def process_file(
     model_name: str = DEFAULT_MODEL_NAME,
     fuse: bool = False,
     debug: bool = False,
-    is_estimation: bool = False,
+    cost_estimation: bool = False,
 ) -> None:
     cost = 0
     file_name = os.path.basename(file_path)
@@ -344,7 +344,7 @@ def process_file(
             content_type="no-code-file",
             docs=no_code_file_data,
             model_name="text-davinci-003",
-            is_estimation=is_estimation,
+            cost_estimation=cost_estimation,
         )
         cost += call_cost
 
@@ -358,7 +358,7 @@ def process_file(
     code_elements = []
     for idx, doc in enumerate(big_docs):
         elements_set, call_cost = extract_code_elements(
-            big_doc=doc, model_name=model_name, is_estimation=is_estimation
+            big_doc=doc, model_name=model_name, cost_estimation=cost_estimation
         )
         cost += call_cost
         if elements_set:
@@ -380,13 +380,13 @@ def process_file(
     logger.info("create tale sections")
     tales_list = []
     # process only if we have elements to document
-    if code_elements_copy or is_estimation:
+    if code_elements_copy or cost_estimation:
         for idx, doc in enumerate(short_docs):
             tale, call_cost = get_unit_tale(
                 short_doc=doc,
                 code_elements=code_elements_copy,
                 model_name=model_name,
-                is_estimation=is_estimation,
+                cost_estimation=cost_estimation,
             )
             cost += call_cost
             tales_list.append(tale)
@@ -408,11 +408,11 @@ def process_file(
         content_type="top-level",
         docs=summaries,
         model_name="text-davinci-003",
-        is_estimation=is_estimation,
+        cost_estimation=cost_estimation,
     )
     cost += call_cost
 
-    if fuse and not is_estimation:
+    if fuse and not cost_estimation:
         # add docstring label only to insert it along the docstring into the code
         tale["file_docstring"] = DOCSTRING_LABEL + "\n" + file_docstring
         fuse_documentation(code, tale, output_path, file_name, file_ext)
@@ -421,7 +421,7 @@ def process_file(
 
     logger.info(f"save dev tale in: {save_path}")
 
-    if not is_estimation:
+    if not cost_estimation:
         with open(save_path, "w") as json_file:
             json.dump(tale, json_file, indent=2)
 
@@ -496,11 +496,10 @@ def fuse_documentation(code, tale, output_path, file_name, file_ext):
 )
 @click.option(
     "--estimation",
-    "is_estimation",
+    "cost_estimation",
     is_flag=True,
     default=False,
-    help="True to calculate an approximate cost of documenting your code without \
-          doing any GPT call",
+    help="When true, estimate the cost of openAI's API usage, without making any call",
 )
 def main(
     path: str,
@@ -509,7 +508,7 @@ def main(
     output_path: str = DEFAULT_OUTPUT_PATH,
     model_name: str = DEFAULT_MODEL_NAME,
     debug: bool = False,
-    is_estimation: bool = False,
+    cost_estimation: bool = False,
 ):
     load_dotenv()
 
@@ -527,7 +526,7 @@ def main(
                 model_name=model_name,
                 fuse=fuse,
                 debug=debug,
-                is_estimation=is_estimation,
+                cost_estimation=cost_estimation,
             )
         else:
             logger.info("Processing folder")
@@ -537,7 +536,7 @@ def main(
                 model_name=model_name,
                 fuse=fuse,
                 debug=debug,
-                is_estimation=is_estimation,
+                cost_estimation=cost_estimation,
             )
     elif os.path.isfile(path):
         logger.info("Processing file")
@@ -547,13 +546,13 @@ def main(
             model_name=model_name,
             fuse=fuse,
             debug=debug,
-            is_estimation=is_estimation,
+            cost_estimation=cost_estimation,
         )
 
     else:
         raise f"Invalid input path {path}. Path must be a directory or code file."
 
-    if is_estimation:
+    if cost_estimation:
         logger.info(f"Approximate cost: {price}")
     else:
         logger.info(f"Total cost: {price}")
