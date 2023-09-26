@@ -2,6 +2,8 @@
 
 Generate full documentation for your code repos. `devtale` supports Python, Go, Javascript, and PHP files.
 
+https://github.com/mystral-ai/devtale/assets/11546115/c464493e-d06c-49c3-9ce4-a16e3ad9d2b0
+
 ## Installation
 
 Create and enter to a conda env:
