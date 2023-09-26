@@ -52,7 +52,6 @@ class PythonAggregator:
                 unparsed_text = ast.unparse(parsed_text)
 
                 indentation_size = self._extract_indentation(unparsed_text, definition)
-                print(f"name: {name}, indentation_size {indentation_size}")
 
                 # add identation to the docstrings
                 lines = comment.split("\n")
