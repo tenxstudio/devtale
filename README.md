@@ -92,4 +92,4 @@ We found that `GPT-3.5` can't extract code components and generate docstring in 
 
 In a high-level overview, devtale works in the following way:
 
-![pipeline](assets/workflow.png)
+![pipeline](assets/pipeline.png)
