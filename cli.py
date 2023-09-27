@@ -438,7 +438,7 @@ def fuse_documentation(code, tale, output_path, file_name, file_ext):
         aggregator = PHPAggregator()
     elif file_ext == ".go":
         aggregator = GoAggregator()
-    elif file_ext == ".js":
+    elif file_ext == ".js" or file_ext == ".ts" or file_ext == ".tsx":
         aggregator = JavascriptAggregator()
 
     fused_tale = aggregator.document(code=code, documentation=tale)

@@ -1,6 +1,6 @@
 # devtale
 
-Generate full documentation for your code repos. `devtale` supports Python, Go, React Javascript, and PHP files.
+Generate full documentation for your code repos. `devtale` supports Python, Go, PHP, and React files.
 
 https://github.com/mystral-ai/devtale/assets/11546115/e3cb1354-d9ef-406f-90d7-e92576587549
 
