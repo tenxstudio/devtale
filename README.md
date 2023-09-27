@@ -84,6 +84,12 @@ python cli.py -r -f -p devtale/devtale
 
 will give you the total cost of $2.95762 USD. This command triggers GPT calls and, consequently, documents the directory.
 
-### Dependency on GPT-4
+## Dependency on GPT-4
 
 We found that `GPT-3.5` can't extract code components and generate docstring in a reliable manner, while `GPT-4` can do so. Hence, devtale currently only works with `GPT-4`. Beware that the cost associated to run devtale on a large code repositive may be prohibitive. To reduce this cost, devtale uses `text-davinci-003` for generating top-level file summaries and README files.
+
+## Pipeline
+
+In a high-level overview, devtale works in the following way:
+
+![pipeline](assets/workflow.png)
