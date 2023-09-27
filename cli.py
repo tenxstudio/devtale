@@ -553,9 +553,9 @@ def main(
         raise f"Invalid input path {path}. Path must be a directory or code file."
 
     if cost_estimation:
-        logger.info(f"Approximate cost: {price}")
+        logger.info(f"Approximate cost: ${price:.5f} USD")
     else:
-        logger.info(f"Total cost: {price}")
+        logger.info(f"Total cost: ${price:.5f} USD")
 
 
 if __name__ == "__main__":
