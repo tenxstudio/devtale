@@ -184,18 +184,24 @@ def process_folder(
     folder_full_name: str = None,
     cost_estimation: bool = False,
 ) -> None:
+    """It creates a dev tale for each file in the directory without exploring
+    subdirectories, and it generates a README section for the folder.
+    """
     cost = 0
     save_path = os.path.join(output_path, os.path.basename(folder_path))
     tales = []
 
+    # Iterate through each file in the folder
     for file_name in os.listdir(folder_path):
         file_path = os.path.join(folder_path, file_name)
 
+        # Check it if is a file that we need to process
         if os.path.isfile(file_path) and (
             os.path.splitext(file_name)[1] in ALLOWED_EXTENSIONS
             or os.path.splitext(file_name)[1] in ALLOWED_NO_CODE_EXTENSIONS
         ):
             logger.info(f"processing {file_path}")
+            # Create dev tale for the file
             try:
                 file_tale, file_cost = process_file(
                     file_path, save_path, model_name, fuse, debug, cost_estimation
@@ -207,6 +213,8 @@ def process_folder(
                 )
                 file_tale = None
 
+            # Create a dictionary with the tale's file_docstrings values to use them
+            # as context for the folder's README section
             if file_tale is not None:
                 if file_tale["file_docstring"]:
                     if not folder_full_name:
@@ -214,9 +222,13 @@ def process_folder(
                             os.path.abspath(folder_path)
                         )
 
+                    # If this is a root folder, make its name more aesthetic.
                     if folder_full_name == ".":
                         folder_full_name = "./"
 
+                    # Check if we already have the folder_name as key, if yes, then
+                    # append the file_docstring on it. Useful when working in a
+                    # repository level.
                     folder_entry = next(
                         (
                             item
@@ -230,7 +242,8 @@ def process_folder(
                             "folder_name": folder_full_name,
                             "folder_files": [],
                         }
-                        if folder_full_name == ".":
+                        # Add a generic description in case this is a root directory.
+                        if folder_full_name == "./":
                             folder_entry[
                                 "folder_description"
                             ] = """
@@ -247,28 +260,33 @@ def process_folder(
                         }
                     )
 
+    # For the debugging mode we do not want to generate the folder's README
+    # section. We only want to verify the input flow.
     if debug:
-        logger.debug(
-            f"""FOLDER INFO:
-        folder_path: {folder_path}
-        output_path: {output_path}
-        save_path: {save_path}
-        """
-        )
+        logger.debug(f"FOLDER INFO: folder_path: {folder_path}")
+        logger.debug(f"FOLDER INFO: output_path: {output_path}")
+        logger.debug(f"FOLDER INFO: save_path: {save_path}")
         logger.debug(f"FILE_TALES: {tales}")
         return "-", "-", cost
 
     if tales:
+        # Generate the folder's README section using as context the tales summaries.
         files_summaries = split_text(str(tales), chunk_size=10000)
-        # split into two calls to avoid issues with json decoding markdow text.
         folder_readme, fl_cost = redact_tale_information(
             "folder-level",
             files_summaries,
             model_name="gpt-3.5-turbo-16k",
             cost_estimation=cost_estimation,
         )
+
+        # Because of the template, GPT might also add the line separator, so we need
+        # to clean
         folder_readme = folder_readme.replace("----------", "")
 
+        # Generate a folder one-line description using the folder's readme as context.
+        # This is a separated call to avoid issues with json attempting to decode
+        # markdown text, and its porpuse is to be used as context for the repository
+        # mode.
         folder_overview, fd_cost = redact_tale_information(
             "folder-description",
             folder_readme,
@@ -278,6 +296,7 @@ def process_folder(
 
         cost += fl_cost + fd_cost
 
+        # save folder tale if we are not pre-estimating cost.
         if not cost_estimation:
             logger.info("save folder json..")
             with open(os.path.join(save_path, "folder_level.json"), "w") as json_file:
