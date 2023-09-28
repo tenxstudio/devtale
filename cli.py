@@ -26,8 +26,6 @@ from devtale.utils import (
 )
 
 DEFAULT_OUTPUT_PATH = "devtale_demo/"
-DEFAULT_MODEL_NAME = "gpt-4"
-
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,7 +34,6 @@ logger = logging.getLogger(__name__)
 def process_repository(
     root_path: str,
     output_path: str = DEFAULT_OUTPUT_PATH,
-    model_name: str = DEFAULT_MODEL_NAME,
     fuse: bool = False,
     debug: bool = False,
     cost_estimation: bool = False,
@@ -107,7 +104,6 @@ def process_repository(
                 output_path=os.path.join(output_path, folder_full_name)
                 if folder_full_name != "."
                 else output_path,
-                model_name=model_name,
                 fuse=fuse,
                 debug=debug,
                 folder_full_name=folder_full_name,
@@ -200,7 +196,6 @@ def process_repository(
 def process_folder(
     folder_path: str,
     output_path: str = DEFAULT_OUTPUT_PATH,
-    model_name: str = DEFAULT_MODEL_NAME,
     fuse: bool = False,
     debug: bool = False,
     folder_full_name: str = None,
@@ -226,7 +221,7 @@ def process_folder(
             # Create dev tale for the file
             try:
                 file_tale, file_cost = process_file(
-                    file_path, save_path, model_name, fuse, debug, cost_estimation
+                    file_path, save_path, fuse, debug, cost_estimation
                 )
                 cost += file_cost
             except Exception as e:
@@ -337,7 +332,6 @@ def process_folder(
 def process_file(
     file_path: str,
     output_path: str = DEFAULT_OUTPUT_PATH,
-    model_name: str = DEFAULT_MODEL_NAME,
     fuse: bool = False,
     debug: bool = False,
     cost_estimation: bool = False,
@@ -375,7 +369,12 @@ def process_file(
         with open(save_path, "r") as file:
             found_tale = json.load(file)
         if fuse:
-            fuse_documentation(code, found_tale, output_path, file_name, file_ext)
+            fuse_documentation(
+                code=code,
+                tale=found_tale,
+                file_ext=file_ext,
+                save_path=os.path.join(output_path, file_name),
+            )
         return found_tale, cost
 
     # For config/bash files we do not aim to document the file itself. We
@@ -410,7 +409,7 @@ def process_file(
     code_elements = []
     for idx, doc in enumerate(big_docs):
         elements_set, call_cost = extract_code_elements(
-            big_doc=doc, model_name=model_name, cost_estimation=cost_estimation
+            big_doc=doc, model_name="gpt-4", cost_estimation=cost_estimation
         )
         cost += call_cost
         if elements_set:
@@ -441,7 +440,7 @@ def process_file(
             tale, call_cost = get_unit_tale(
                 short_doc=doc,
                 code_elements=code_elements_copy,
-                model_name=model_name,
+                model_name="gpt-4",
                 cost_estimation=cost_estimation,
             )
             cost += call_cost
@@ -522,37 +521,28 @@ def process_file(
     "output_path",
     required=False,
     default=DEFAULT_OUTPUT_PATH,
-    help="The destination folder where you want to save the documentation outputs",
-)
-@click.option(
-    "-n",
-    "--model-name",
-    "model_name",
-    required=False,
-    default=DEFAULT_MODEL_NAME,
-    help="The OpenAI model name you want to use. \
-    https://platform.openai.com/docs/models",
+    help="The destination folder where you want to save the documentation outputs. \
+        Default: devtale_demo/",
 )
 @click.option(
     "--debug",
     "debug",
     is_flag=True,
     default=False,
-    help="Mock answer and avoid GPT calls",
+    help="Mock answers avoiding any GPT call.",
 )
 @click.option(
     "--estimation",
     "cost_estimation",
     is_flag=True,
     default=False,
-    help="When true, estimate the cost of openAI's API usage, without making any call",
+    help="When true, estimate the cost of openAI's API usage, without making any call.",
 )
 def main(
     path: str,
     recursive: bool,
     fuse: bool,
     output_path: str = DEFAULT_OUTPUT_PATH,
-    model_name: str = DEFAULT_MODEL_NAME,
     debug: bool = False,
     cost_estimation: bool = False,
 ):
@@ -569,7 +559,6 @@ def main(
             price = process_repository(
                 root_path=path,
                 output_path=output_path,
-                model_name=model_name,
                 fuse=fuse,
                 debug=debug,
                 cost_estimation=cost_estimation,
@@ -579,7 +568,6 @@ def main(
             _, _, price = process_folder(
                 folder_path=path,
                 output_path=output_path,
-                model_name=model_name,
                 fuse=fuse,
                 debug=debug,
                 cost_estimation=cost_estimation,
@@ -589,7 +577,6 @@ def main(
         _, price = process_file(
             file_path=path,
             output_path=output_path,
-            model_name=model_name,
             fuse=fuse,
             debug=debug,
             cost_estimation=cost_estimation,
