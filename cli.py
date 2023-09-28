@@ -41,13 +41,16 @@ def process_repository(
     debug: bool = False,
     cost_estimation: bool = False,
 ) -> None:
+    """It creates a dev tale for each file in the repository, and it
+    generates a README for the whole repository.
+    """
     cost = 0
     folder_tales = {
         "repository_name": os.path.basename(os.path.abspath(root_path)),
         "folders": [],
     }
 
-    # get original readme before creating a new one
+    # Extract the content of the original README if there is one already.
     original_readme_content = None
     for file_name in ["readme.md", "README.md"]:
         readme_path = os.path.join(root_path, file_name)
@@ -61,7 +64,8 @@ def process_repository(
                     logger.info(f"Error keeping the original readme file: {e}")
             break
 
-    # get project structure before we modify it
+    # Check if we have a gitignore file to extract the correct project tree
+    # and files.
     gitignore_path = os.path.join(root_path, ".gitignore")
     if os.path.exists(gitignore_path):
         with open(gitignore_path, "r") as gitignore_file:
@@ -71,22 +75,33 @@ def process_repository(
     else:
         gitignore_patterns = None
 
+    # Get the project tree before modify it along with the complete list of files
+    # that the repository has.
     project_tree, file_paths = build_project_tree(
         root_path, gitignore_patterns=gitignore_patterns
     )
     project_tree = ".\n" + project_tree
 
+    # Extract the folder paths from files list. This allows to avoid processing
+    # folders that should be ignored, and to use the process_folder logic.
     folders = list(set([os.path.dirname(file_path) for file_path in file_paths]))
+
+    # sort to always have the root folder at the beggining of the list.
     folders = sorted(folders, key=lambda path: path.count("/"))
 
+    # Get the folder's README section of each folder while it create a dev tale
+    # for each file.
     folders_readmes = []
     for folder_path in folders:
         try:
+            # Fix folder path to avoid issues with file system.
             if not folder_path.endswith("/"):
                 folder_path += "/"
 
             folder_full_name = os.path.relpath(folder_path, root_path)
 
+            # Generate folder's README, folder's one-line sentence description, and
+            # extract the cost of documenting the folder.
             folder_readme, folder_tale, folder_cost = process_folder(
                 folder_path=folder_path,
                 output_path=os.path.join(output_path, folder_full_name)
@@ -107,9 +122,11 @@ def process_repository(
             )
             folder_tale = None
 
+        # Create a dictionary with the folder's info that serves as context for
+        # generating the main repository README.
         if folder_tale:
             folders_readmes.append("\n\n" + folder_readme)
-            # add root folder summary information
+            # Fix root folder information.
             if folder_path == folders[0]:
                 folder_tales["folders"].append(
                     {
@@ -126,11 +143,13 @@ def process_repository(
                     }
                 )
 
+    # For debugging, we only care in seeing the files input workflow
     if debug:
         logger.debug(f"FOLDER_TALES: {folder_tales}")
         return None
 
     if folder_tales:
+        # Generate main README using as context the folders summaries.
         folder_summaries = split_text(str(folder_tales), chunk_size=15000)
         root_readme, call_cost = redact_tale_information(
             "root-level",
@@ -139,18 +158,21 @@ def process_repository(
             cost_estimation=cost_estimation,
         )
         cost += call_cost
+
+        # Because of the template, GPT might also add the line separator, so we need
+        # to clean.
         root_readme = root_readme.replace("----------", "")
 
-        # inject folders information
+        # Append the folders README sections.
         if folders_readmes:
             folders_information = "\n\n## Folders" + "".join(folders_readmes)
             root_readme = root_readme + folders_information
 
-        # inject project tree
+        # Append the project tree.
         tree = f"\n\n## Project Tree\n```bash\n{project_tree}```\n\n"
         root_readme = root_readme + tree
 
-        # inject original readme if there is one
+        # Append the original readme content as extra notes, removing the header.
         if original_readme_content:
             filtered_original_readme = [
                 line for line in original_readme_content if not line.startswith("# ")
@@ -158,9 +180,9 @@ def process_repository(
             modified_original_readme = "\n\n## Extra notes\n\n" + "".join(
                 filtered_original_readme
             )
-
             root_readme = root_readme + modified_original_readme
 
+        # save main README if we are not pre-estimating cost.
         if not cost_estimation:
             logger.info("save root json..")
             with open(os.path.join(output_path, "root_level.json"), "w") as json_file:
