@@ -17,7 +17,7 @@ from devtale.utils import (
     build_project_tree,
     extract_code_elements,
     fuse_documentation,
-    fuse_tales,
+    fuse_tales_chunks,
     get_unit_tale,
     prepare_code_elements,
     redact_tale_information,
@@ -450,7 +450,7 @@ def process_file(
     # Combine all generated docstrings JSON-formated ouputs into a single,
     # general one.
     logger.info("create dev tale")
-    tale, errors = fuse_tales(tales_list, code, code_elements_dict)
+    tale, errors = fuse_tales_chunks(tales_list, code, code_elements_dict)
 
     # Check if we discarded some docstrings.
     if len(errors) > 0:

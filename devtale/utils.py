@@ -38,16 +38,6 @@ TYPE_INFORMATION = {
 }
 
 
-def calculate_cost(input: str, model: str):
-    if model == "text-davinci-003":
-        encoding = "p50k_base"
-    else:
-        encoding = "cl100k_base"
-
-    tokens = tiktoken.get_encoding(encoding).encode(input)
-    return (len(tokens) / 1000) * GPT_PRICE[model]
-
-
 def split_text(text, chunk_size=1000, chunk_overlap=0):
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=chunk_size, chunk_overlap=chunk_overlap
@@ -76,7 +66,7 @@ def extract_code_elements(
     )
 
     if cost_estimation:
-        estimated_cost = calculate_cost(
+        estimated_cost = _calculate_cost(
             prompt.format(code=big_doc.page_content), model_name
         )
         return "", estimated_cost
@@ -86,6 +76,72 @@ def extract_code_elements(
         cost = cb.total_cost
 
     return result_string["text"], cost
+
+
+def get_unit_tale(
+    short_doc, code_elements, model_name="gpt-4", verbose=False, cost_estimation=False
+):
+    parser = PydanticOutputParser(pydantic_object=FileDocumentation)
+    prompt = PromptTemplate(
+        template=CODE_LEVEL_TEMPLATE,
+        input_variables=["code", "code_elements"],
+        partial_variables={"format_instructions": parser.get_format_instructions()},
+    )
+    teller_of_tales = LLMChain(
+        llm=ChatOpenAI(model_name=model_name), prompt=prompt, verbose=verbose
+    )
+
+    if cost_estimation:
+        estimated_cost = _calculate_cost(
+            prompt.format(
+                code=short_doc.page_content, code_elements=str(code_elements)
+            ),
+            model_name,
+        )
+        return {"classes": [], "methods": []}, estimated_cost
+
+    with get_openai_callback() as cb:
+        result_string = teller_of_tales(
+            {"code": short_doc.page_content, "code_elements": code_elements}
+        )
+        cost = cb.total_cost
+
+    json_answer = _convert_to_json(result_string)
+    if not json_answer:
+        print("Returning empty JSON due to a failure")
+        json_answer = {"classes": [], "methods": []}
+    return json_answer, cost
+
+
+def redact_tale_information(
+    content_type,
+    docs,
+    verbose=False,
+    model_name="text-davinci-003",
+    cost_estimation=False,
+):
+    prompt = PromptTemplate(
+        template=TYPE_INFORMATION[content_type], input_variables=["information"]
+    )
+    teller_of_tales = LLMChain(
+        llm=OpenAI(model_name=model_name), prompt=prompt, verbose=verbose
+    )
+    if content_type not in ["no-code-file", "folder-description"]:
+        information = str(docs[0].page_content)
+    else:
+        information = str(docs)
+
+    if cost_estimation:
+        estimated_cost = _calculate_cost(
+            prompt.format(information=information), model_name
+        )
+        return "", estimated_cost
+
+    with get_openai_callback() as cb:
+        text_answer = teller_of_tales({"information": information})
+        cost = cb.total_cost
+
+    return text_answer["text"], cost
 
 
 def prepare_code_elements(code_elements):
@@ -105,31 +161,7 @@ def prepare_code_elements(code_elements):
     return elements
 
 
-def _process_extracted_code_element(text: str):
-    """It converts GPT text output into a dictionary of code elements"""
-    classes_match = re.search(r"classes=(\[.*?\])", text)
-    methods_match = re.search(r"methods=(\[.*?\])", text)
-    summary_match = re.search(r'summary="([^"]*)"', text)
-
-    classes = []
-    methods = []
-    summary = ""
-
-    if classes_match:
-        classes_str = classes_match.group(1)
-        classes = re.findall(r'"(.*?)"', classes_str)
-
-    if methods_match:
-        methods_str = methods_match.group(1)
-        methods = re.findall(r'"(.*?)"', methods_str)
-
-    if summary_match:
-        summary = summary_match.group(1)
-
-    return {"classes": classes, "methods": methods, "summary": summary}
-
-
-def fuse_tales(tales_list, code, code_elements_dict):
+def fuse_tales_chunks(tales_list, code, code_elements_dict):
     """Combine all the generated docstrings JSON-formatted GPT outputs into
     a single one, remove hallucinations and duplicates.
     """
@@ -176,127 +208,6 @@ def fuse_tales(tales_list, code, code_elements_dict):
     return fused_tale, errors
 
 
-def _is_hallucination(code_definition, code, expected_definitions):
-    # Verify that the code_definition is expected
-    if code_definition not in expected_definitions:
-        return True
-
-    # Check if the code_definition exists within the code
-    if not re.search(r"\b" + re.escape(code_definition) + r"\b", code):
-        return True
-    return False
-
-
-def redact_tale_information(
-    content_type,
-    docs,
-    verbose=False,
-    model_name="text-davinci-003",
-    cost_estimation=False,
-):
-    prompt = PromptTemplate(
-        template=TYPE_INFORMATION[content_type], input_variables=["information"]
-    )
-    teller_of_tales = LLMChain(
-        llm=OpenAI(model_name=model_name), prompt=prompt, verbose=verbose
-    )
-    if content_type not in ["no-code-file", "folder-description"]:
-        information = str(docs[0].page_content)
-    else:
-        information = str(docs)
-
-    if cost_estimation:
-        estimated_cost = calculate_cost(
-            prompt.format(information=information), model_name
-        )
-        return "", estimated_cost
-
-    with get_openai_callback() as cb:
-        text_answer = teller_of_tales({"information": information})
-        cost = cb.total_cost
-
-    return text_answer["text"], cost
-
-
-def convert_to_json(text_answer):
-    try:
-        result_json = json.loads(text_answer["text"])
-        return result_json
-    except JSONDecodeError:
-        try:
-            text = text_answer["text"].replace("\\n", "\n")
-            start_index = text.find("{")
-            end_index = text.rfind("}")
-
-            if start_index != -1 and end_index != -1 and start_index < end_index:
-                json_text = text[start_index : end_index + 1]
-
-            json_text = _add_escape_characters(json_text)
-            result_json = json.loads(json_text)
-            return result_json
-
-        except Exception as e:
-            print(
-                f"Error getting the JSON. \
-                Error: {e} \n Result: {text_answer['text']}"
-            )
-            return None
-
-
-def get_unit_tale(
-    short_doc, code_elements, model_name="gpt-4", verbose=False, cost_estimation=False
-):
-    parser = PydanticOutputParser(pydantic_object=FileDocumentation)
-    prompt = PromptTemplate(
-        template=CODE_LEVEL_TEMPLATE,
-        input_variables=["code", "code_elements"],
-        partial_variables={"format_instructions": parser.get_format_instructions()},
-    )
-    teller_of_tales = LLMChain(
-        llm=ChatOpenAI(model_name=model_name), prompt=prompt, verbose=verbose
-    )
-
-    if cost_estimation:
-        estimated_cost = calculate_cost(
-            prompt.format(
-                code=short_doc.page_content, code_elements=str(code_elements)
-            ),
-            model_name,
-        )
-        return {"classes": [], "methods": []}, estimated_cost
-
-    with get_openai_callback() as cb:
-        result_string = teller_of_tales(
-            {"code": short_doc.page_content, "code_elements": code_elements}
-        )
-        cost = cb.total_cost
-
-    json_answer = convert_to_json(result_string)
-    if not json_answer:
-        print("Returning empty JSON due to a failure")
-        json_answer = {"classes": [], "methods": []}
-    return json_answer, cost
-
-
-def _add_escape_characters(invalid_json):
-    control_char_pattern = re.compile(r"[\x00-\x1F\x7F-\x9F]")
-    unescaped_chars = control_char_pattern.findall(invalid_json)
-
-    # Escape the unescaped control characters
-    for char in unescaped_chars:
-        invalid_json = invalid_json.replace(char, "\\u{:04x}".format(ord(char)))
-
-    return invalid_json
-
-
-def _should_ignore(path, gitignore_patterns):
-    path = Path(path)
-    for pattern in gitignore_patterns:
-        if path.match(pattern) or any(p.match(pattern) for p in path.parents):
-            return True
-    return False
-
-
 def build_project_tree(root_dir, indent="", gitignore_patterns=None):
     if gitignore_patterns is None:
         gitignore_patterns = []
@@ -336,3 +247,92 @@ def fuse_documentation(code, tale, file_ext, save_path):
     fused_tale = aggregator.document(code=code, documentation=tale)
     with open(save_path, "w") as file:
         file.write(fused_tale)
+
+
+def _calculate_cost(input: str, model: str):
+    if model == "text-davinci-003":
+        encoding = "p50k_base"
+    else:
+        encoding = "cl100k_base"
+
+    tokens = tiktoken.get_encoding(encoding).encode(input)
+    return (len(tokens) / 1000) * GPT_PRICE[model]
+
+
+def _convert_to_json(text_answer):
+    try:
+        result_json = json.loads(text_answer["text"])
+        return result_json
+    except JSONDecodeError:
+        try:
+            text = text_answer["text"].replace("\\n", "\n")
+            start_index = text.find("{")
+            end_index = text.rfind("}")
+
+            if start_index != -1 and end_index != -1 and start_index < end_index:
+                json_text = text[start_index : end_index + 1]
+
+            json_text = _add_escape_characters(json_text)
+            result_json = json.loads(json_text)
+            return result_json
+
+        except Exception as e:
+            print(
+                f"Error getting the JSON. \
+                Error: {e} \n Result: {text_answer['text']}"
+            )
+            return None
+
+
+def _add_escape_characters(invalid_json):
+    control_char_pattern = re.compile(r"[\x00-\x1F\x7F-\x9F]")
+    unescaped_chars = control_char_pattern.findall(invalid_json)
+
+    # Escape the unescaped control characters
+    for char in unescaped_chars:
+        invalid_json = invalid_json.replace(char, "\\u{:04x}".format(ord(char)))
+
+    return invalid_json
+
+
+def _process_extracted_code_element(text: str):
+    """It converts GPT text output into a dictionary of code elements"""
+    classes_match = re.search(r"classes=(\[.*?\])", text)
+    methods_match = re.search(r"methods=(\[.*?\])", text)
+    summary_match = re.search(r'summary="([^"]*)"', text)
+
+    classes = []
+    methods = []
+    summary = ""
+
+    if classes_match:
+        classes_str = classes_match.group(1)
+        classes = re.findall(r'"(.*?)"', classes_str)
+
+    if methods_match:
+        methods_str = methods_match.group(1)
+        methods = re.findall(r'"(.*?)"', methods_str)
+
+    if summary_match:
+        summary = summary_match.group(1)
+
+    return {"classes": classes, "methods": methods, "summary": summary}
+
+
+def _is_hallucination(code_definition, code, expected_definitions):
+    # Verify that the code_definition is expected
+    if code_definition not in expected_definitions:
+        return True
+
+    # Check if the code_definition exists within the code
+    if not re.search(r"\b" + re.escape(code_definition) + r"\b", code):
+        return True
+    return False
+
+
+def _should_ignore(path, gitignore_patterns):
+    path = Path(path)
+    for pattern in gitignore_patterns:
+        if path.match(pattern) or any(p.match(pattern) for p in path.parents):
+            return True
+    return False
