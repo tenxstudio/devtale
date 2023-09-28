@@ -322,7 +322,7 @@ def process_file(
     with open(file_path, "r") as file:
         code = file.read()
 
-    # Return empty devtale if the input file is empty
+    # Return empty devtale if the input file is empty.
     if not code:
         return {"file_docstring": ""}, cost
 
@@ -380,7 +380,7 @@ def process_file(
     logger.info("prepare code elements")
     code_elements_dict = prepare_code_elements(code_elements)
 
-    # Make a copy to keep the original dict intact
+    # Make a copy to keep the original dict intact.
     code_elements_copy = copy.deepcopy(code_elements_dict)
 
     # Clean dict copy to remove keys with empty values and the summaries
@@ -394,7 +394,7 @@ def process_file(
     logger.info("create tale sections")
     tales_list = []
     # Generate a docstring for each class and function/method in the
-    # code_elements
+    # code_elements.
     if code_elements_copy or cost_estimation:
         for idx, doc in enumerate(short_docs):
             tale, call_cost = get_unit_tale(
@@ -412,7 +412,7 @@ def process_file(
     logger.info("create dev tale")
     tale, errors = fuse_tales(tales_list, code, code_elements_dict)
 
-    # Check if we discarded some docstrings
+    # Check if we discarded some docstrings.
     if len(errors) > 0:
         logger.info(
             f"We encountered errors while fusing the following \
@@ -420,7 +420,7 @@ def process_file(
         )
 
     # Generate a top-level docstrings using as context all the summaries we got
-    # from each big_doc code chunk output
+    # from each big_doc code chunk output.
     logger.info("add dev tale summary")
     summaries = split_text(str(code_elements_dict["summary"]), chunk_size=9000)
 
@@ -432,15 +432,15 @@ def process_file(
     )
     cost += call_cost
 
-    # Add the docstrings in the code file
+    # Add the docstrings in the code file.
     if fuse and not cost_estimation:
-        # add devtale label into the top-file summary
+        # add devtale label into the top-file summary.
         tale["file_docstring"] = DOCSTRING_LABEL + "\n" + file_docstring
         fused_save_path = os.path.join(output_path, file_name)
         logger.info(f"save fused dev tale in: {fused_save_path}")
         fuse_documentation(code, tale, file_ext, save_path=fused_save_path)
 
-    # remove devtale label
+    # Remove devtale label.
     tale["file_docstring"] = file_docstring
 
     logger.info(f"save dev tale in: {save_path}")
