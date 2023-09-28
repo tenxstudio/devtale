@@ -7,12 +7,6 @@ import os
 import click
 from dotenv import load_dotenv
 
-from devtale.aggregators import (
-    GoAggregator,
-    JavascriptAggregator,
-    PHPAggregator,
-    PythonAggregator,
-)
 from devtale.constants import (
     ALLOWED_EXTENSIONS,
     ALLOWED_NO_CODE_EXTENSIONS,
@@ -22,6 +16,7 @@ from devtale.constants import (
 from devtale.utils import (
     build_project_tree,
     extract_code_elements,
+    fuse_documentation,
     fuse_tales,
     get_unit_tale,
     prepare_code_elements,
@@ -306,15 +301,20 @@ def process_file(
     debug: bool = False,
     cost_estimation: bool = False,
 ) -> None:
+    """It creates a dev tale for the file input."""
     cost = 0
     file_name = os.path.basename(file_path)
     file_ext = os.path.splitext(file_name)[-1]
     save_path = os.path.join(output_path, f"{file_name}.json")
 
+    # For the debugging mode we do not want to process the file, we only want
+    # to verify input. Useful to verify the repository/directories flow.
     if debug:
         logger.debug(f"FILE INFO:\nfile_path: {file_path}\nsave_path: {save_path}")
         return {"file_docstring": "-"}, cost
 
+    # Create output dir if it does not exists and only if we are not
+    # pre-estimating the cost.
     if not os.path.exists(output_path) and not cost_estimation:
         os.makedirs(output_path)
 
@@ -322,9 +322,13 @@ def process_file(
     with open(file_path, "r") as file:
         code = file.read()
 
+    # Return empty devtale if the input file is empty
     if not code:
         return {"file_docstring": ""}, cost
 
+    # Avoid processing a file twice if we already have a tale for it.
+    # Only fuse it again. Useful to avoid GPT calls in case of debugging
+    # aggregators.
     if os.path.exists(save_path):
         logger.info(f"Skipping {file_name} as its tale file already exists.")
         with open(save_path, "r") as file:
@@ -333,9 +337,12 @@ def process_file(
             fuse_documentation(code, found_tale, output_path, file_name, file_ext)
         return found_tale, cost
 
+    # For config/bash files we do not aim to document the file itself. We
+    # care about understanding what the file does.
     if not file_ext or file_ext in ALLOWED_NO_CODE_EXTENSIONS:
         # a small single chunk is enough
         no_code_file = split_text(code, chunk_size=5000)[0].page_content
+        # prepare input
         no_code_file_data = {
             "file_name": file_name,
             "file_content": no_code_file,
@@ -350,6 +357,10 @@ def process_file(
 
         return {"file_docstring": file_docstring}, cost
 
+    # big_docs reduces the number of GPT-4 calls as we want to extract
+    # functions/classes names, while short_docs allows GPT-4 to focus in
+    # a more granular context to accurately generate the docstring for each
+    # function/class that it found.
     logger.info("split dev draft ideas")
     big_docs = split_code(code, language=LANGUAGES[file_ext], chunk_size=10000)
     short_docs = split_code(code, language=LANGUAGES[file_ext], chunk_size=3000)
@@ -364,13 +375,16 @@ def process_file(
         if elements_set:
             code_elements.append(elements_set)
 
+    # Combine all the code elements extracted into a single general Dict
+    # without duplicates.
     logger.info("prepare code elements")
     code_elements_dict = prepare_code_elements(code_elements)
 
     # Make a copy to keep the original dict intact
     code_elements_copy = copy.deepcopy(code_elements_dict)
 
-    # clean
+    # Clean dict copy to remove keys with empty values and the summaries
+    # of each code chunk.
     code_elements_copy.pop("summary", None)
     if not code_elements_copy["classes"]:
         code_elements_copy.pop("classes", None)
@@ -379,7 +393,8 @@ def process_file(
 
     logger.info("create tale sections")
     tales_list = []
-    # process only if we have elements to document
+    # Generate a docstring for each class and function/method in the
+    # code_elements
     if code_elements_copy or cost_estimation:
         for idx, doc in enumerate(short_docs):
             tale, call_cost = get_unit_tale(
@@ -392,15 +407,20 @@ def process_file(
             tales_list.append(tale)
             logger.info(f"tale section {str(idx+1)}/{len(short_docs)} done.")
 
+    # Combine all generated docstrings JSON-formated ouputs into a single,
+    # general one.
     logger.info("create dev tale")
     tale, errors = fuse_tales(tales_list, code, code_elements_dict)
 
+    # Check if we discarded some docstrings
     if len(errors) > 0:
         logger.info(
             f"We encountered errors while fusing the following \
                     tales for {file_name} - Corrupted tales: {errors}"
         )
 
+    # Generate a top-level docstrings using as context all the summaries we got
+    # from each big_doc code chunk output
     logger.info("add dev tale summary")
     summaries = split_text(str(code_elements_dict["summary"]), chunk_size=9000)
 
@@ -412,38 +432,23 @@ def process_file(
     )
     cost += call_cost
 
+    # Add the docstrings in the code file
     if fuse and not cost_estimation:
-        # add docstring label only to insert it along the docstring into the code
+        # add devtale label into the top-file summary
         tale["file_docstring"] = DOCSTRING_LABEL + "\n" + file_docstring
-        fuse_documentation(code, tale, output_path, file_name, file_ext)
+        fused_save_path = os.path.join(output_path, file_name)
+        logger.info(f"save fused dev tale in: {fused_save_path}")
+        fuse_documentation(code, tale, file_ext, save_path=fused_save_path)
 
+    # remove devtale label
     tale["file_docstring"] = file_docstring
 
     logger.info(f"save dev tale in: {save_path}")
-
     if not cost_estimation:
         with open(save_path, "w") as json_file:
             json.dump(tale, json_file, indent=2)
 
     return tale, cost
-
-
-def fuse_documentation(code, tale, output_path, file_name, file_ext):
-    save_path = os.path.join(output_path, file_name)
-    logger.info(f"save fused dev tale in: {save_path}")
-
-    if file_ext == ".py":
-        aggregator = PythonAggregator()
-    elif file_ext == ".php":
-        aggregator = PHPAggregator()
-    elif file_ext == ".go":
-        aggregator = GoAggregator()
-    elif file_ext == ".js" or file_ext == ".ts" or file_ext == ".tsx":
-        aggregator = JavascriptAggregator()
-
-    fused_tale = aggregator.document(code=code, documentation=tale)
-    with open(save_path, "w") as file:
-        file.write(fused_tale)
 
 
 @click.command()

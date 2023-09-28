@@ -11,6 +11,12 @@ from langchain.chat_models import ChatOpenAI
 from langchain.output_parsers import PydanticOutputParser
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 
+from devtale.aggregators import (
+    GoAggregator,
+    JavascriptAggregator,
+    PHPAggregator,
+    PythonAggregator,
+)
 from devtale.constants import DOCSTRING_LABEL, GPT_PRICE
 from devtale.schema import FileDocumentation
 from devtale.templates import (
@@ -82,7 +88,25 @@ def extract_code_elements(
     return result_string["text"], cost
 
 
+def prepare_code_elements(code_elements):
+    """Convert GPT text output into a dictionary and combine each
+    dictionary into a single, general one
+    """
+    elements = {"classes": [], "methods": [], "summary": []}
+    for code_element in code_elements:
+        info = _process_extracted_code_element(code_element)
+        elements["classes"].extend(info["classes"])
+        elements["methods"].extend(info["methods"])
+        elements["summary"].append(info["summary"])
+
+    # remove duplicates
+    elements["classes"] = list(set(elements["classes"]))
+    elements["methods"] = list(set(elements["methods"]))
+    return elements
+
+
 def _process_extracted_code_element(text: str):
+    """It converts GPT text output into a dictionary of code elements"""
     classes_match = re.search(r"classes=(\[.*?\])", text)
     methods_match = re.search(r"methods=(\[.*?\])", text)
     summary_match = re.search(r'summary="([^"]*)"', text)
@@ -105,18 +129,62 @@ def _process_extracted_code_element(text: str):
     return {"classes": classes, "methods": methods, "summary": summary}
 
 
-def prepare_code_elements(code_elements):
-    elements = {"classes": [], "methods": [], "summary": []}
-    for code_element in code_elements:
-        info = _process_extracted_code_element(code_element)
-        elements["classes"].extend(info["classes"])
-        elements["methods"].extend(info["methods"])
-        elements["summary"].append(info["summary"])
+def fuse_tales(tales_list, code, code_elements_dict):
+    """Combine all the generated docstrings JSON-formatted GPT outputs into
+    a single one, remove hallucinations and duplicates.
+    """
+    fused_tale = {"classes": [], "methods": []}
+    errors = []
+    unique_methods = set()
+    unique_classes = set()
 
-    # remove duplicates
-    elements["classes"] = list(set(elements["classes"]))
-    elements["methods"] = list(set(elements["methods"]))
-    return elements
+    for tale in tales_list:
+        if "classes" in tale:
+            for class_info in tale["classes"]:
+                if isinstance(class_info, dict):
+                    class_name = class_info["class_name"]
+                    if class_name not in unique_classes and not _is_hallucination(
+                        class_name, code, code_elements_dict["classes"]
+                    ):
+                        unique_classes.add(class_name)
+                        # Attach the devtale label on each docstring
+                        class_info["class_docstring"] = (
+                            DOCSTRING_LABEL + "\n" + class_info["class_docstring"]
+                        )
+                        fused_tale["classes"].append(class_info)
+                else:
+                    if tale not in errors:
+                        errors.append(tale)
+
+        if "methods" in tale:
+            for method_info in tale["methods"]:
+                if isinstance(method_info, dict):
+                    method_name = method_info["method_name"]
+                    if method_name not in unique_methods and not _is_hallucination(
+                        method_name, code, code_elements_dict["methods"]
+                    ):
+                        unique_methods.add(method_name)
+                        # Attach the dectale label on each docstring
+                        method_info["method_docstring"] = (
+                            DOCSTRING_LABEL + "\n" + method_info["method_docstring"]
+                        )
+                        fused_tale["methods"].append(method_info)
+                else:
+                    if tale not in errors:
+                        errors.append(tale)
+
+    return fused_tale, errors
+
+
+def _is_hallucination(code_definition, code, expected_definitions):
+    # Verify that the code_definition is expected
+    if code_definition not in expected_definitions:
+        return True
+
+    # Check if the code_definition exists within the code
+    if not re.search(r"\b" + re.escape(code_definition) + r"\b", code):
+        return True
+    return False
 
 
 def redact_tale_information(
@@ -210,59 +278,6 @@ def get_unit_tale(
     return json_answer, cost
 
 
-def is_hallucination(code_definition, code, expected_definitions):
-    # Verify that the code_definition is expected
-    if code_definition not in expected_definitions:
-        return True
-
-    # Check if the code_definition exists within the code
-    if not re.search(r"\b" + re.escape(code_definition) + r"\b", code):
-        return True
-    return False
-
-
-def fuse_tales(tales_list, code, code_elements_dict):
-    fused_tale = {"classes": [], "methods": []}
-    errors = []
-    unique_methods = set()
-    unique_classes = set()
-
-    for tale in tales_list:
-        if "classes" in tale:
-            for class_info in tale["classes"]:
-                if isinstance(class_info, dict):
-                    class_name = class_info["class_name"]
-                    if class_name not in unique_classes and not is_hallucination(
-                        class_name, code, code_elements_dict["classes"]
-                    ):
-                        unique_classes.add(class_name)
-                        class_info["class_docstring"] = (
-                            DOCSTRING_LABEL + "\n" + class_info["class_docstring"]
-                        )
-                        fused_tale["classes"].append(class_info)
-                else:
-                    if tale not in errors:
-                        errors.append(tale)
-
-        if "methods" in tale:
-            for method_info in tale["methods"]:
-                if isinstance(method_info, dict):
-                    method_name = method_info["method_name"]
-                    if method_name not in unique_methods and not is_hallucination(
-                        method_name, code, code_elements_dict["methods"]
-                    ):
-                        unique_methods.add(method_name)
-                        method_info["method_docstring"] = (
-                            DOCSTRING_LABEL + "\n" + method_info["method_docstring"]
-                        )
-                        fused_tale["methods"].append(method_info)
-                else:
-                    if tale not in errors:
-                        errors.append(tale)
-
-    return fused_tale, errors
-
-
 def _add_escape_characters(invalid_json):
     control_char_pattern = re.compile(r"[\x00-\x1F\x7F-\x9F]")
     unescaped_chars = control_char_pattern.findall(invalid_json)
@@ -306,3 +321,18 @@ def build_project_tree(root_dir, indent="", gitignore_patterns=None):
             file_paths.append(item_path)
 
     return tree, file_paths
+
+
+def fuse_documentation(code, tale, file_ext, save_path):
+    if file_ext == ".py":
+        aggregator = PythonAggregator()
+    elif file_ext == ".php":
+        aggregator = PHPAggregator()
+    elif file_ext == ".go":
+        aggregator = GoAggregator()
+    elif file_ext == ".js" or file_ext == ".ts" or file_ext == ".tsx":
+        aggregator = JavascriptAggregator()
+
+    fused_tale = aggregator.document(code=code, documentation=tale)
+    with open(save_path, "w") as file:
+        file.write(fused_tale)
