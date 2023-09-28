@@ -6,18 +6,22 @@ branding:
 
 inputs:
   openai_api_key:
-    description: "Your OpenAI API key"
+    description: "Your OpenAI API key."
     required: true
   path:
     description: "Path to your repository, folder, or file."
     required: true
   recursive:
-    description: "True if you want to document the full repository. Otherwise False"
+    description: "True if you want to document the full repository. Otherwise False."
     required: false
     default: false
   target_branch:
-    description: "Branch name for the documentation pull request."
+    description: "Base branch name to which the documentation pull request should point."
     required: true
+  save_tales:
+    description: "True if you want to keep the tale files. Otherwise False to remove them."
+    required: false
+    default: false
 
 runs:
   using: "composite"
@@ -48,12 +52,16 @@ runs:
 
     - name: Clean Documentation Files
       run: |
-        rm -f *.py.json
-        rm -f *.php.json
-        rm -f *.go.json
-        rm -f *.js.json
-        rm -f *folder_level.json
-        rm -f *root_level.json
+        if ! ${{ inputs.save_tales }}; then
+          rm -f *.py.json
+          rm -f *.php.json
+          rm -f *.go.json
+          rm -f *.js.json
+          rm -f *.ts.json
+          rm -f *.tsx.json
+          rm -f *folder_level.json
+          rm -f *root_level.json
+        fi
       shell: bash
 
     - name: Push PR

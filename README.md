@@ -1,6 +1,6 @@
 # devtale
 
-Every software product depends on some legacy, undocumented code repositories, whose authors left the company years ago. 
+Every software product depends on some legacy, undocumented code repositories, whose authors left the company years ago.
 
 Who isn't afraid to make a change, if the code is unreadable?
 
@@ -60,6 +60,7 @@ jobs:
           path: ${{ github.workspace }}
           recursive: true
           target_branch: main
+          save_tales: false
 ```
 
 The `recursive` option allows you to document the entire repository. Alternatively, you can specify a specific path to document a single file or folder and set `recursive` to `false`. The workflow action will automatically create the `devtale/documentation` branch and push a new pull request for your review towards the `target_branch`, including the added documentation.
