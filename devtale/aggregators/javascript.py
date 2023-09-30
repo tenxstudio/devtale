@@ -11,6 +11,7 @@ class JavascriptAggregator:
         documented_code = self._add_docstrings(
             documentation, documented_code, type="methods"
         )
+        documented_code = self._add_tsx_docstrings(documentation, documented_code)
         documented_code = self._add_docstrings(
             documentation, documented_code, type="classes"
         )
@@ -49,6 +50,41 @@ class JavascriptAggregator:
             for i, line in enumerate(lines):
                 if re.findall(pattern, line, re.MULTILINE):
                     if previous_line:
+                        # Check if the function or class is already documented
+                        if "*/" not in previous_line and "//" not in previous_line:
+                            indentation = self._extract_indentation(line)
+                            fixed_docstring = self._break_large_strings(docstring)
+                            fixed_docstring = self._format_docstring(
+                                fixed_docstring, indentation
+                            )
+                            lines.insert(i, fixed_docstring)
+                            break
+                elif line.strip():
+                    previous_line = line
+
+        return "\n".join(lines)
+
+    def _add_tsx_docstrings(self, documentation, code):
+        entities = documentation["methods"]
+        lines = code.splitlines()
+        previous_line = None
+
+        for entity in entities:
+            name_to_search = entity["method_name"]
+            docstring = entity["method_docstring"]
+
+            pattern = (
+                r""
+                + re.escape(name_to_search)
+                + "\s*=\s*(\(\s*\)\s*=>\s*{|\(\s*([^)]*)\s*\)\s*=>)|"
+                + re.escape(name_to_search)
+                + r"\(\)\s*=>\s*{\)"
+            )
+
+            for i, line in enumerate(lines):
+                if re.findall(pattern, line, re.MULTILINE):
+                    if previous_line:
+                        # Check if the function or class is already documented
                         if "*/" not in previous_line and "//" not in previous_line:
                             indentation = self._extract_indentation(line)
                             fixed_docstring = self._break_large_strings(docstring)
@@ -74,6 +110,7 @@ class JavascriptAggregator:
         return indentation
 
     def _format_docstring(self, docstring, indentation):
+        """It adds the in-line comment key character."""
         lines = docstring.split("\n")
         js_docstring = "\n" + " " * indentation + "/*\n"
         for line in lines:
@@ -84,6 +121,7 @@ class JavascriptAggregator:
     def _document_file(self, documentation, code):
         file_description = self._break_large_strings(documentation["file_docstring"])
         words = code.split()
+        # Check if the file already has a top-file docstring
         if words[0] != "//" and words[0] != "/*" and not words[0].startswith("/*"):
             code = "/*" + file_description + "*/\n" + code
 
