@@ -83,6 +83,7 @@ class PHPAggregator:
         return code
 
     def _format_docstring(self, docstring, indentation):
+        """Add the in-line comment character key"""
         lines = docstring.split("\n")
         php_docstring = "\n" + " " * indentation + "/**\n"
         for line in lines:
@@ -109,6 +110,9 @@ class PHPAggregator:
         return indentation
 
     def _break_large_strings(self, string, max_lenght=90):
+        """Avoid very long in-line comments by breaking them into smaller
+        segments with a maximum length.
+        """
         words = string.split()
         lines = []
         current_line = ""

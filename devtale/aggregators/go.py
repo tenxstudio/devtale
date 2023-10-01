@@ -65,6 +65,9 @@ class GoAggregator:
         return documented_code
 
     def _break_large_strings(self, string, max_lenght=90):
+        """Avoid very long in-line comments by breaking them into smaller
+        segments with a maximum length.
+        """
         words = string.replace("\\n", " \n ").split()
         lines = []
         current_line = ""
@@ -82,6 +85,7 @@ class GoAggregator:
         return "\n".join(["// " + line for line in lines])
 
     def _document_file(self, documentation, code):
+        """Add a top-level docstring if there isn't one already."""
         file_description = self._break_large_strings(documentation["file_docstring"])
         words = code.split()
         if words[0] != "//" and words[0] != "/*":
