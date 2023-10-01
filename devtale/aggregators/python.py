@@ -29,19 +29,26 @@ class PythonAggregator:
         code_definitions = self._get_code_definitions(code_w_placeholders)
         documented_code = code
 
+        # For each function/method or class definition we found using AST, we match
+        # it with the dev tale info.
         for name, definition in code_definitions.items():
             splited_definition = definition.split()
 
-            prefix = splited_definition[0]
-            postfix = splited_definition[-1]
+            prefix = splited_definition[0]  # def, class
+            postfix = splited_definition[-1]  # last text Eg. "->None", "):", etc
 
             type_item = "method" if prefix == "def" else "class"
-            if len(splited_definition) == 2:
+            # Extract only the last character if we have conflicting text that won't
+            # allow us to match the pattern.
+            if len(splited_definition) == 2 or "'" in postfix or '"' in postfix:
                 postfix = postfix[-1]
+
             pattern = r"" + prefix + "\s+" + name + "[\s\S]*?" + re.escape(postfix)
 
             docstring = self._get_docstring(type_item, name, documentation)
-            docstring = self._fix_docstring(docstring)
+
+            # docstring = self._fix_docstring(docstring)
+            docstring = self._break_large_strings(docstring)
             comment = f'\n"""{docstring}"""'
             match = re.findall(pattern, documented_code)
 
@@ -69,6 +76,7 @@ class PythonAggregator:
         return documented_code
 
     def _add_file_level_docstring(self, code: str, documentation):
+        """Add a top-level docstring if there isn't one already."""
         file_description = self._break_large_strings(documentation["file_docstring"])
         docstring = f'"""{file_description}\n"""\n'
 
@@ -79,6 +87,11 @@ class PythonAggregator:
         return code
 
     def _add_placeholders(self, code: str):
+        """AST is capable of adding docstrings to the code; however, it reformats
+        the file. To avoid this, we add a placeholder that we later search for in
+        the process. This helps us determine the location where the docstring
+        should be attached.
+        """
         code_tree = ast.parse(code)
         placeholder_adder = Placeholder()
         modified_ast = placeholder_adder.visit(code_tree)
@@ -87,6 +100,9 @@ class PythonAggregator:
         return modified_code
 
     def _get_code_definitions(self, code_w_placeholders):
+        """Search for the placeholder we added and extract the function/method or
+        class signature.
+        """
         code_definitions = {}
         lines = code_w_placeholders.splitlines()
 
@@ -139,6 +155,9 @@ class PythonAggregator:
         return indentation_size
 
     def _break_large_strings(self, string, max_lenght=90):
+        """Avoid very long in-line comments by breaking them into smaller
+        segments with a maximum length.
+        """
         words = string.split()
         lines = []
         current_line = ""
@@ -153,7 +172,7 @@ class PythonAggregator:
         if current_line:
             lines.append(current_line)
 
-        return "\n".join(lines)
+        return "\n".join([line for line in lines])
 
     def _fix_docstring(self, docstring):
         pattern = r"^(.*?)(?=Args:|Returns:|$)"
