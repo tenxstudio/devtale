@@ -34,9 +34,7 @@ runs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        cd ${{ github.action_path }}
-        python setup.py install
-        cd ${{ github.workspace }}
+        pip install devtale
       shell: bash
 
     - name: Document

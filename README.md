@@ -13,7 +13,7 @@ https://github.com/mystral-ai/devtale/assets/11546115/e3cb1354-d9ef-406f-90d7-e9
 Use the following command:
 
 ```bash
-python setup.py install
+pip install devtale
 ```
 
 ## Usage
