@@ -9,6 +9,9 @@ repository = "https://github.com/mystral-ai/devtale"
 license = "MIT"
 packages = [{include = "devtale"}]
 
+[tool.poetry.scripts]
+devtale = "devtale.cli:main"
+
 [tool.poetry.dependencies]
 python = "^3.11.4"
 langchain = "^0.0.251"
