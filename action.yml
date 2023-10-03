@@ -34,17 +34,17 @@ runs:
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
-        pip install -r ${{ github.action_path }}/requirements.txt
+        python ${{ github.action_path }}/setup.py install
       shell: bash
 
     - name: Document
       run: |
         if ${{ inputs.recursive }}; then
           echo "Documenting repository"
-          python ${{ github.action_path }}/devtale/cli.py -r -p ${{ inputs.path }} -o ${{ inputs.path }} -f
+          devtale -r -p ${{ inputs.path }} -o ${{ inputs.path }} -f
         else
           echo "Documenting folder/path"
-          python ${{ github.action_path }}/devtale/cli.py -p ${{ inputs.path }} -o ${{ inputs.path }} -f
+          devtale -p ${{ inputs.path }} -o ${{ inputs.path }} -f
         fi
       env:
         OPENAI_API_KEY: ${{ inputs.openai_api_key }}
