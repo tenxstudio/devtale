@@ -67,15 +67,20 @@ python-dotenv==1.0.0
     # via -r requirements.in
 pyyaml==6.0.1
     # via langchain
+regex==2023.8.8
+    # via tiktoken
 requests==2.31.0
     # via
     #   langchain
     #   langsmith
     #   openai
+    #   tiktoken
 sqlalchemy==2.0.19
     # via langchain
 tenacity==8.2.2
     # via langchain
+tiktoken==0.5.1
+    # via -r requirements.in
 tqdm==4.65.0
     # via openai
 typing-extensions==4.7.1
