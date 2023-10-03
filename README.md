@@ -47,7 +47,7 @@ jobs:
     permissions: write-all
     steps:
       - name: Document
-        uses: mystral-ai/devtale@v0.1.1
+        uses: mystral-ai/devtale@v0.1.2
         with:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           path: ${{ github.workspace }}
