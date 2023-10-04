@@ -5,7 +5,7 @@ import logging
 import os
 
 import click
-from dotenv import load_dotenv
+from dotenv import find_dotenv, load_dotenv
 
 from devtale.constants import (
     ALLOWED_EXTENSIONS,
@@ -546,7 +546,7 @@ def main(
     debug: bool = False,
     cost_estimation: bool = False,
 ):
-    load_dotenv()
+    load_dotenv(find_dotenv(usecwd=True))
 
     if not os.environ.get("OPENAI_API_KEY"):
         os.environ["OPENAI_API_KEY"] = getpass.getpass(

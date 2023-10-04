@@ -1,0 +1,30 @@
+[tool.poetry]
+name = "devtale"
+version = "0.1.2"
+description = "Generate automatic repository documentation with LLMs"
+readme = "README.md"
+homepage = "https://github.com/mystral-ai/devtale"
+repository = "https://github.com/mystral-ai/devtale"
+license = "MIT"
+packages = [{include = "devtale"}]
+
+[tool.poetry.scripts]
+devtale = "devtale.cli:main"
+
+[tool.poetry.dependencies]
+python = "^3.11.4"
+langchain = "^0.0.251"
+openai = "^0.27.8"
+click = "^8.1.6"
+python-dotenv = "^1.0.0"
+tiktoken = "^0.5.1"
+
+[tool.poetry.group.dev.dependencies]
+pre-commit = "^3.3.3"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+ignore = ["E501"]
