@@ -2,6 +2,7 @@
 name = "devtale"
 version = "0.1.2"
 description = "Generate automatic repository documentation with LLMs"
+authors = ["Mystral AI"]
 readme = "README.md"
 homepage = "https://github.com/mystral-ai/devtale"
 repository = "https://github.com/mystral-ai/devtale"
