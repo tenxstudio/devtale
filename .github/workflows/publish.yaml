@@ -1,9 +1,10 @@
 name: Publish
 
 on:
+  workflow_dispatch: # Allow running on-demand
   push:
-    branches:
-      - feat/make-installable
+    tags:
+      - "*"
 
 env:
   PYTHON_VERSION: 3.11.4
