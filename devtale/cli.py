@@ -409,7 +409,9 @@ def process_file(
     code_elements = []
     for idx, doc in enumerate(big_docs):
         elements_set, call_cost = extract_code_elements(
-            big_doc=doc, model_name="gpt-4", cost_estimation=cost_estimation
+            big_doc=doc,
+            model_name="gpt-4-1106-preview",
+            cost_estimation=cost_estimation,
         )
         cost += call_cost
         if elements_set:
@@ -440,7 +442,7 @@ def process_file(
             tale, call_cost = get_unit_tale(
                 short_doc=doc,
                 code_elements=code_elements_copy,
-                model_name="gpt-4",
+                model_name="gpt-4-1106-preview",
                 cost_estimation=cost_estimation,
             )
             cost += call_cost

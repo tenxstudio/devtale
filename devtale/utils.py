@@ -4,6 +4,7 @@ import re
 from json import JSONDecodeError
 from pathlib import Path
 
+import json_repair
 import tiktoken
 from langchain import LLMChain, PromptTemplate
 from langchain.callbacks import get_openai_callback
@@ -55,7 +56,7 @@ def split_code(code, language, chunk_size=1000, chunk_overlap=0):
 
 
 def extract_code_elements(
-    big_doc, verbose=False, model_name="gpt-4", cost_estimation=False
+    big_doc, verbose=False, model_name="gpt-4-1106-preview", cost_estimation=False
 ):
     prompt = PromptTemplate(
         template=CODE_EXTRACTOR_TEMPLATE,
@@ -79,7 +80,11 @@ def extract_code_elements(
 
 
 def get_unit_tale(
-    short_doc, code_elements, model_name="gpt-4", verbose=False, cost_estimation=False
+    short_doc,
+    code_elements,
+    model_name="gpt-4-1106-preview",
+    verbose=False,
+    cost_estimation=False,
 ):
     parser = PydanticOutputParser(pydantic_object=FileDocumentation)
     prompt = PromptTemplate(
@@ -267,8 +272,7 @@ def _convert_to_json(text_answer):
             if start_index != -1 and end_index != -1 and start_index < end_index:
                 json_text = text[start_index : end_index + 1]
 
-            json_text = _add_escape_characters(json_text)
-            result_json = json.loads(json_text)
+            result_json = json_repair.loads(json_text)
             return result_json
 
         except Exception as e:
