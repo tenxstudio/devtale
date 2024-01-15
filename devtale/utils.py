@@ -5,7 +5,7 @@ from json import JSONDecodeError
 from pathlib import Path
 
 import tiktoken
-from langchain import LLMChain, OpenAI, PromptTemplate
+from langchain import LLMChain, PromptTemplate
 from langchain.callbacks import get_openai_callback
 from langchain.chat_models import ChatOpenAI
 from langchain.output_parsers import PydanticOutputParser
@@ -117,14 +117,14 @@ def redact_tale_information(
     content_type,
     docs,
     verbose=False,
-    model_name="text-davinci-003",
+    model_name="gpt-3.5-turbo",
     cost_estimation=False,
 ):
     prompt = PromptTemplate(
         template=TYPE_INFORMATION[content_type], input_variables=["information"]
     )
     teller_of_tales = LLMChain(
-        llm=OpenAI(model_name=model_name), prompt=prompt, verbose=verbose
+        llm=ChatOpenAI(model_name=model_name), prompt=prompt, verbose=verbose
     )
     if content_type not in ["no-code-file", "folder-description"]:
         information = str(docs[0].page_content)
@@ -250,12 +250,7 @@ def fuse_documentation(code, tale, file_ext, save_path):
 
 
 def _calculate_cost(input: str, model: str):
-    if model == "text-davinci-003":
-        encoding = "p50k_base"
-    else:
-        encoding = "cl100k_base"
-
-    tokens = tiktoken.get_encoding(encoding).encode(input)
+    tokens = tiktoken.get_encoding("cl100k_base").encode(input)
     return (len(tokens) / 1000) * GPT_PRICE[model]
 
 

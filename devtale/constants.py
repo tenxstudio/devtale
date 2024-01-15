@@ -16,5 +16,5 @@ LANGUAGES = {
 
 DOCSTRING_LABEL = "@DEVTALE-GENERATED:"
 
-# Extracted from https://openai.com/pricing on September 26th, 2023.
-GPT_PRICE = {"gpt-4": 0.03, "gpt-3.5-turbo-16k": 0.03, "text-davinci-003": 0.0015}
+# Extracted from https://openai.com/pricing on January 15th, 2024.
+GPT_PRICE = {"gpt-4": 0.03, "gpt-3.5-turbo-16k": 0.0010, "gpt-3.5-turbo": 0.0015}
