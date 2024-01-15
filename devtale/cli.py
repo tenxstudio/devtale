@@ -390,7 +390,7 @@ def process_file(
         file_docstring, call_cost = redact_tale_information(
             content_type="no-code-file",
             docs=no_code_file_data,
-            model_name="text-davinci-003",
+            model_name="gpt-3.5-turbo",
             cost_estimation=cost_estimation,
         )
         cost += call_cost
@@ -467,7 +467,7 @@ def process_file(
     file_docstring, call_cost = redact_tale_information(
         content_type="top-level",
         docs=summaries,
-        model_name="text-davinci-003",
+        model_name="gpt-3.5-turbo",
         cost_estimation=cost_estimation,
     )
     cost += call_cost
