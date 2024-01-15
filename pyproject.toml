@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "devtale"
-version = "0.1.2"
+version = "0.1.3"
 description = "Generate automatic repository documentation with LLMs"
 authors = ["Mystral AI"]
 readme = "README.md"
