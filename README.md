@@ -82,7 +82,7 @@ will give you the total cost of $2.95762 USD. This command triggers GPT calls an
 
 ## Dependency on GPT-4
 
-We found that `GPT-3.5` can't extract code components and generate docstring in a reliable manner, while `GPT-4` can do so. Hence, devtale currently only works with `GPT-4`. Beware that the cost associated with running devtale on a large code repository may be prohibitive. To reduce this cost, devtale uses `text-davinci-003` for generating top-level file summaries and README files.
+We found that `GPT-3.5` can't extract code components and generate docstring in a reliable manner, while `GPT-4` can do so. Hence, devtale currently only works with `GPT-4`. Beware that the cost associated with running devtale on a large code repository may be prohibitive. To reduce this cost, devtale uses `gpt-3.5-turbo-0613` for generating top-level file summaries and README files and `gpt-4-1106-preview` for the rest.
 
 ## Pipeline
 
